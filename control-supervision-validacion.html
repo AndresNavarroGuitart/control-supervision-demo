@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control de Supervisión — validación</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a6fc4'/%3E%3Cpath d='M9 17l4.5 4.5L23 12' stroke='%23fff' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f7f6f2; --surface: #fdfdfb; --raised: #ffffff; --ink: #1c1b18; --ink-2: #5f5c55; --muted: #8f8c83;
+      --hairline: #e7e5de; --wash: rgba(28, 27, 24, 0.035); --accent: #2a6fc4; --accent-ink: #ffffff; --accent-wash: rgba(42, 111, 196, 0.09);
+      --good: #0ca30c; --warn: #d99a00; --crit: #c73a3a;
+      --shadow: 0 1px 2px rgba(28, 27, 24, 0.04), 0 10px 28px -14px rgba(28, 27, 24, 0.10);
+      --ring: 0 0 0 2px var(--page), 0 0 0 4px var(--accent);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --page: #131311; --surface: #1b1b18; --raised: #21211e; --ink: #f4f3ef; --ink-2: #b8b5ac; --muted: #8f8c83;
+        --hairline: #2b2b27; --wash: rgba(244, 243, 239, 0.045); --accent: #5b96e0; --accent-ink: #10131a; --accent-wash: rgba(91, 150, 224, 0.14);
+        --warn: #e0b23e; --crit: #d96666;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -16px rgba(0, 0, 0, 0.45);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI Variable Display', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif; background: var(--page); color: var(--ink); max-width: 880px; margin: 0 auto; padding: 1.6rem 1.2rem 5rem; line-height: 1.55; }
+    h1 { font-size: 1.6rem; font-weight: 650; letter-spacing: -0.022em; line-height: 1.15; margin: 0 0 .25rem; }
+    h2 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.012em; margin: 2.4rem 0 .2rem; }
+    h3 { font-size: .98rem; font-weight: 600; margin: 0 0 .25rem; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    .lead { color: var(--ink-2); max-width: 66ch; margin: .3rem 0 0; }
+    .card { background: var(--surface); border-radius: 14px; padding: 1rem 1.2rem; margin: .7rem 0; box-shadow: var(--shadow); }
+    .steps { margin: .4rem 0 0; padding-left: 1.2rem; font-size: .92rem; color: var(--ink-2); }
+    .steps li { margin-bottom: .3rem; }
+    code { background: var(--wash); padding: .05rem .35rem; border-radius: 5px; font-size: .86em; }
+    .progress-bar { position: sticky; top: 0; z-index: 10; background: var(--page); padding: .6rem 0 .5rem; margin-top: 1.2rem; }
+    .progress-row { display: flex; justify-content: space-between; font-size: .84rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .track { height: 8px; background: var(--wash); border-radius: 6px; overflow: hidden; margin-top: .3rem; }
+    .track > span { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .2s ease; }
+    .sec-note { color: var(--muted); font-size: .84rem; margin: 0 0 .5rem; }
+    .item { background: var(--surface); border-radius: 14px; padding: .9rem 1.1rem 1rem; margin: .6rem 0; box-shadow: var(--shadow); border-left: 4px solid transparent; }
+    .item.ok { border-left-color: var(--good); }
+    .item.cambios { border-left-color: var(--warn); }
+    .item.no { border-left-color: var(--crit); }
+    .item-head { display: flex; gap: .6rem; align-items: baseline; }
+    .item-id { font-variant-numeric: tabular-nums; font-size: .78rem; font-weight: 650; color: var(--accent); background: var(--accent-wash); padding: .05rem .5rem; border-radius: 999px; flex: none; }
+    .item p { margin: .25rem 0 0; font-size: .9rem; color: var(--ink-2); }
+    .propuesta { margin-top: .45rem; font-size: .84rem; }
+    .propuesta b { color: var(--ink); }
+    .opts { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .7rem; }
+    .opts input { position: absolute; opacity: 0; pointer-events: none; }
+    .opts label { font-size: .84rem; padding: .3rem .8rem; border: 1px solid var(--hairline); border-radius: 999px; cursor: pointer; background: var(--raised); color: var(--ink-2); font-weight: 500; transition: background-color .15s, border-color .15s; }
+    .opts label:hover { border-color: var(--accent); }
+    .opts input:focus-visible + label { box-shadow: var(--ring); }
+    .opts input:checked + label { color: #fff; font-weight: 600; }
+    .opts input[value="ok"]:checked + label { background: var(--good); border-color: var(--good); }
+    .opts input[value="cambios"]:checked + label { background: var(--warn); border-color: var(--warn); }
+    .opts input[value="no"]:checked + label { background: var(--crit); border-color: var(--crit); }
+    textarea, input[type="text"], input[type="date"] { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--hairline); border-radius: 9px; padding: .45rem .65rem; width: 100%; }
+    textarea { margin-top: .6rem; resize: vertical; min-height: 56px; font-size: .88rem; }
+    :focus-visible { outline: none; box-shadow: var(--ring); }
+    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .8rem; margin-top: .6rem; }
+    .field-grid label { display: block; font-size: .78rem; font-weight: 600; color: var(--ink-2); margin-bottom: .25rem; }
+    button { font: inherit; font-weight: 500; color: var(--ink); background: var(--raised); border: 1px solid var(--hairline); border-radius: 9px; padding: .5rem .9rem; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .actions { display: flex; gap: .55rem; flex-wrap: wrap; margin-top: 1rem; }
+    .resumen { font-size: .9rem; margin-top: .8rem; }
+    .resumen b { font-variant-numeric: tabular-nums; }
+    #preview { display: none; margin-top: .8rem; font-family: ui-monospace, Consolas, monospace; font-size: .78rem; min-height: 200px; }
+    #msg { font-size: .85rem; color: var(--ink-2); margin-top: .6rem; min-height: 1.2em; }
+    @media print { .progress-bar, .actions { display: none; } body { max-width: none; } .item, .card { box-shadow: none; border: 1px solid var(--hairline); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Control de Supervisión — validación</h1>
+    <p class="lead">Esta página reúne los 29 puntos de la maqueta que necesitamos que revisen y confirmen antes de avanzar. Para cada uno, marcá si estás conforme, si querés cambios o si no estás de acuerdo, y escribí el detalle.</p>
+    <p class="muted" style="margin:.4rem 0 0">Versión actualizada el 12/10/2026.</p>
+    <p style="margin:.6rem 0 0;font-size:.9rem"><a href="control-supervision-preview.html" target="_blank" rel="noopener">Maqueta interactiva</a> · <a href="control-supervision-geolocalizacion.html" target="_blank" rel="noopener">Esquema de geolocalización</a></p>
+  </header>
+
+  <div class="card">
+    <h3>Cómo recorrer la maqueta</h3>
+    <ol class="steps">
+      <li>Abrí la <a href="control-supervision-preview.html" target="_blank" rel="noopener">maqueta interactiva</a> (se abre en otra pestaña) y dejá esta página abierta para ir respondiendo.</li>
+      <li><b>Vista Supervisor:</b> recorré "Mis controles" → <b>Ver mapa</b> → <b>Realizar control</b>: registrá la ubicación, calificá los ítems, probá subir una foto y <b>Generar caso</b> desde un ítem con puntaje bajo, y finalizá.</li>
+      <li>Con el selector gris de la barra superior ("Solo para la demo") simulá estar en el servicio, cerca pero afuera, o lejos, y mirá cómo cambia la validación de ubicación.</li>
+      <li>Cambiá a <b>Ver como: Administración central</b>: Panel, Controles, Excepciones de ubicación, Casos recibidos y Supervisores. El caso que generaste como supervisor aparece ahí.</li>
+      <li>En <b>Controles</b> de Administración probá: abrir un control (también uno en curso) para ver lo que cargó el supervisor, sin poder editarlo; tocar una foto para verla ampliada; <b>+ Generar control</b>; y <b>Reasignar ▾</b> un control a otro supervisor (después volvé a "Ver como: Supervisor" para ver cómo le llega).</li>
+    </ol>
+    <p class="muted" style="margin:.6rem 0 0">Todos los datos de la maqueta (contactos, teléfonos, coordenadas, nombres de supervisores) son de ejemplo, y se pierden al recargar la página.</p>
+  </div>
+
+  <div class="progress-bar" role="status" aria-live="polite">
+    <div class="progress-row"><span id="prog-txt"></span><span id="saved-txt" class="muted"></span></div>
+    <div class="track"><span id="prog-bar" style="width:0%"></span></div>
+  </div>
+
+  <main id="form"></main>
+
+  <div class="card" id="cierre">
+    <h3>Datos de quien valida</h3>
+    <div class="field-grid">
+      <div><label for="v-nombre">Nombre y apellido</label><input type="text" id="v-nombre" autocomplete="name"></div>
+      <div><label for="v-cargo">Cargo / empresa</label><input type="text" id="v-cargo"></div>
+      <div><label for="v-fecha">Fecha</label><input type="date" id="v-fecha"></div>
+    </div>
+    <label for="v-general" style="display:block;margin-top:.8rem;font-size:.78rem;font-weight:600;color:var(--ink-2)">Observaciones generales</label>
+    <textarea id="v-general" placeholder="Cualquier otro comentario sobre la maqueta" style="margin-top:.25rem"></textarea>
+    <p class="resumen" id="resumen"></p>
+    <div class="actions">
+      <button type="button" class="primary" id="btn-descargar">Descargar respuestas (.md)</button>
+      <button type="button" id="btn-copiar">Copiar resumen</button>
+      <button type="button" id="btn-ver">Ver resumen</button>
+      <button type="button" id="btn-borrar">Borrar todo</button>
+    </div>
+    <p id="msg"></p>
+    <textarea id="preview" readonly aria-label="Resumen de respuestas"></textarea>
+    <p class="muted" style="margin:.8rem 0 0">Las respuestas se guardan en este navegador mientras completás. Al terminar, descargá el archivo y enviánoslo, o copiá el resumen y pegalo en un mail.</p>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  const DATA = {"secciones":[{"id":"A","titulo":"Formulario de control","nota":"Contenido tomado de Form_Supervisores. Se ve en la planilla que se abre al tocar \"Realizar control\".","items":[{"id":"A1","t":"Contenido del formulario","d":"4 secciones (Áreas de exteriores, Áreas internas, Otros sectores, Otros aspectos del servicio) y 19 ítems, tal como están en el formulario original."},{"id":"A2","t":"Escala de calificación","d":"Puntaje de 1 a 5 con los criterios definidos (Malo, Calidad deficiente, Calidad Media, Calidad aceptable, Excelente), y la opción N/A para los ítems que no aplican al servicio."},{"id":"A3","t":"Comentarios y fotos","d":"Cada sección tiene un campo de comentarios y la posibilidad de sacar o cargar fotos. Ambos son opcionales. Las fotos se pueden ampliar al tocarlas."},{"id":"A4","t":"Identificación del servicio y de quien completa","d":"El formulario original pide \"identificar el servicio\" sin detallar los campos. Se propone: servicio, ubicación, contacto y horario (ya cargados) y, a completar, quién lo hace (Supervisor o Encargado), nombre, fecha y horas de ingreso y egreso.","propuesta":"Campos propuestos por nosotros","ph":"¿Qué campos hay que agregar o quitar?"},{"id":"A5","t":"Puntaje del control","d":"Promedio de los ítems calificados (sin contar los N/A) y cantidad de ítems críticos (puntaje 1 o 2). Si hay ítems críticos, se aclara que el promedio no los refleja."}]},{"id":"B","titulo":"Programación de los controles","nota":"Se ve en \"Mis controles\".","items":[{"id":"B1","t":"Frecuencias por servicio","d":"Cada servicio tiene una frecuencia: semanal, quincenal o mensual. ¿Son las correctas? ¿Quién define la frecuencia de cada servicio?","propuesta":"Semanal (7 días), quincenal (15), mensual (30)","ph":"Frecuencias que corresponden y quién las define"},{"id":"B2","t":"Programación del siguiente control","d":"Al finalizar un control, el siguiente queda programado automáticamente: fecha de finalización más la frecuencia del servicio."},{"id":"B3","t":"Estados y avisos de plazo","d":"Estados: Pendiente, En curso (borrador) y Realizado. Avisos en pantalla: \"En plazo\", \"Vence en 3 días o menos\", \"Vence hoy\" y \"Vencido\". ¿Se necesita además un aviso por mail o WhatsApp al supervisor?","ph":"Avisos adicionales que se necesitan"},{"id":"B4","t":"Control vencido","d":"Hoy un control vencido se marca en rojo y se ve en el panel de Administración central. ¿Debe tener alguna otra consecuencia?","ph":"Qué debería pasar con un control vencido"},{"id":"B5","t":"Generar un control desde Administración central","d":"Administración central puede generar un control nuevo con los mismos datos que uno ya existente: servicio, supervisor asignado, frecuencia y plazo. Queda pendiente de realizar. Si el servicio ya tiene un control pendiente, se avisa antes de generar otro. ¿Se necesita algún dato más (por ejemplo, instrucciones o prioridad)?","ph":"Datos adicionales al generar un control"},{"id":"B6","t":"Reasignar un control a otro supervisor","d":"Cuando el supervisor habitual no está disponible, Administración central reasigna el control a otro supervisor desde un desplegable, indicando el motivo (no disponible, licencia, capacitación, cambio de zona u otro). El control pasa a la lista del nuevo supervisor con el mismo plazo, y el próximo control del servicio vuelve al supervisor habitual. Solo se pueden reasignar controles que todavía no se realizaron. ¿Es el circuito correcto? ¿Debe avisarse a los supervisores involucrados?","ph":"Cambios al circuito de reasignación y avisos"}]},{"id":"C","titulo":"Casos generados desde un control","nota":"Se ve en la planilla (botón \"Generar caso\") y en la pestaña \"Casos generados\".","items":[{"id":"C1","t":"Generar un caso desde el control","d":"El supervisor puede generar un caso desde un ítem puntual o desde el control completo, y se deriva a Administración central. El caso viaja con el ítem, el puntaje, el comentario y, si se quiere, las fotos."},{"id":"C2","t":"Tipo de caso sugerido según el puntaje","d":"Puntaje 1 o 2: No conformidad. Puntaje 3: Observación. Puntaje 4 o 5: Oportunidad de Mejora. El supervisor puede cambiarlo.","propuesta":"1-2 No conformidad · 3 Observación · 4-5 Oportunidad de Mejora"},{"id":"C3","t":"Afectación y destino de la derivación","d":"Se usan las 9 afectaciones del módulo de Casos. Destinos disponibles: Administración central, Compras, Logística, Documentación, Uniforme y RR.HH. ¿Quién recibe los casos en Administración central? (el nombre que aparece en la maqueta es de ejemplo).","ph":"Destinos y responsables correctos"},{"id":"C4","t":"Estados del caso","d":"Administración central cambia el estado: Derivado, En tratamiento, Finalizado. ¿Falta algún estado?","ph":"Estados que faltan"},{"id":"C5","t":"Integración con el módulo de Casos","d":"Estos casos deberían entrar a la lista de Casos del Tablero Operativo, con origen \"Control de supervisión\".","propuesta":"Origen: Control de supervisión"}]},{"id":"D","titulo":"Geolocalización del supervisor","nota":"Se ve en \"Ver mapa\" y en la tarjeta \"Ubicación del control\" de la planilla. Esquema completo en la página Esquema de geolocalización (enlace al inicio de esta página).","items":[{"id":"D1","t":"Radio permitido","d":"El supervisor está \"en el lugar\" si está a no más de 150 m del servicio. ¿Es el mismo radio para todos los servicios o debe variar (por ejemplo, un supermercado grande u obrador)?","propuesta":"150 m","ph":"Radio que corresponde (o por tipo de servicio)"},{"id":"D2","t":"Precisión máxima del GPS","d":"Si el GPS del celular tiene una precisión peor que 100 m (por ejemplo, dentro de un subsuelo), la ubicación no se da por verificada.","propuesta":"100 m","ph":"Precisión aceptada"},{"id":"D3","t":"Dos lecturas por control","d":"El supervisor registra su ubicación al llegar (check-in), no puede finalizar sin hacerlo, y el sistema vuelve a leerla al finalizar."},{"id":"D4","t":"Qué pasa si no se puede verificar","d":"El supervisor debe escribir un motivo y el control queda marcado como excepción. Administración central la revisa y la aprueba o pide una aclaración. ¿Es el circuito correcto?","ph":"Cambios al circuito de excepciones"},{"id":"D5","t":"Coordenadas de cada servicio","d":"Las coordenadas de los servicios se cargan en la base de clientes (en la maqueta son de ejemplo). ¿Quién las carga y las confirma?","ph":"Responsable de cargar las coordenadas"},{"id":"D6","t":"Alcance de la comprobación","d":"El GPS del celular puede falsearse con aplicaciones de ubicación simulada, así que no es una prueba infalible. Se combinan capas: GPS, segunda lectura al cerrar, fotos tomadas con la cámara y hora del sistema. Opcionalmente se puede sumar un QR pegado en cada servicio o una app propia. ¿Con esto alcanza?","ph":"¿Se necesita reforzarlo? ¿Cómo?"},{"id":"D7","t":"Datos personales","d":"Solo se guarda la ubicación en dos momentos (check-in y cierre), sin seguimiento continuo. ¿Cuánto tiempo debe conservarse y cómo se informa a los supervisores?","ph":"Tiempo de conservación y comunicación al supervisor"}]},{"id":"E","titulo":"Administración central","nota":"Se ve con \"Ver como: Administración central\".","items":[{"id":"E1","t":"Panel","d":"Muestra controles realizados (30 días), vencidos, puntaje promedio, excepciones sin revisar y casos abiertos; puntaje por supervisor y por sección; y una lista \"Para atender\". ¿Falta algún indicador?","ph":"Indicadores que faltan"},{"id":"E2","t":"Seguimiento de supervisores","d":"Tabla por supervisor con servicios, pendientes, vencidos, realizados, puntaje, ítems críticos, excepciones y casos. ¿Qué otros datos se necesitan?","ph":"Datos adicionales"},{"id":"E3","t":"Seguimiento en solo lectura","d":"Administración central puede abrir cualquier control y ver lo que cargó el supervisor (puntajes, comentarios, fotos y ubicación), incluso mientras el control está en curso, sin poder editarlo. Las fotos se pueden abrir ampliadas y recorrer una por una. ¿Debe poder dejar comentarios o pedir correcciones al supervisor desde ahí? ¿Debe quedar registro de quién consultó cada control?","ph":"Comentarios, correcciones o registro de consultas"},{"id":"E4","t":"Reportes","d":"¿Se necesita un reporte periódico (por ejemplo mensual o trimestral, para Dirección) con exportación a PDF o Excel?","ph":"Reportes y periodicidad"}]},{"id":"F","titulo":"Alcance y próximos pasos","nota":"","items":[{"id":"F1","t":"Qué no incluye esta maqueta","d":"No guarda datos, no tiene usuarios ni claves, no envía avisos por mail o WhatsApp y no está conectada al Tablero Operativo. ¿Qué se prioriza para una primera versión?","ph":"Prioridades para la primera versión"},{"id":"F2","t":"Datos reales a cargar","d":"Listado de supervisores y de los servicios que tiene a cargo cada uno, frecuencia de cada servicio y coordenadas. ¿Quién los provee y para cuándo?","ph":"Responsable y fecha"}]}],"opciones":[["ok","Conforme"],["cambios","Conforme con cambios"],["no","No conforme"]]};
+  const KEY = 'control-supervision-validacion-v1';
+  const $ = (s, r) => (r || document).querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const items = DATA.secciones.flatMap((s) => s.items.map((i) => ({ ...i, sec: s })));
+  const LABEL = Object.fromEntries(DATA.opciones);
+
+  let state = { resp: {}, nombre: '', cargo: '', fecha: '', general: '' };
+  try { const g = localStorage.getItem(KEY); if (g) state = { ...state, ...JSON.parse(g) }; } catch (e) { /* sin almacenamiento: se trabaja en memoria */ }
+  if (!state.fecha) { const d = new Date(); state.fecha = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); $('#saved-txt').textContent = 'Guardado en este navegador'; } catch (e) { $('#saved-txt').textContent = 'No se pudo guardar en este navegador: descargá las respuestas al terminar'; }
+  }
+
+  $('#form').innerHTML = DATA.secciones.map((s) => '<h2>' + esc(s.id) + '. ' + esc(s.titulo) + '</h2>' + (s.nota ? '<p class="sec-note">' + esc(s.nota) + '</p>' : '') +
+    s.items.map((i) => {
+      const r = state.resp[i.id] || {};
+      return '<section class="item ' + esc(r.op || '') + '" id="item-' + i.id + '" data-id="' + i.id + '">' +
+        '<div class="item-head"><span class="item-id">' + i.id + '</span><h3>' + esc(i.t) + '</h3></div>' +
+        '<p>' + esc(i.d) + '</p>' +
+        (i.propuesta ? '<p class="propuesta"><b>Propuesta:</b> ' + esc(i.propuesta) + '</p>' : '') +
+        '<div class="opts" role="radiogroup" aria-label="Respuesta para ' + i.id + '">' + DATA.opciones.map(([v, l]) =>
+          '<input type="radio" name="op-' + i.id + '" id="op-' + i.id + '-' + v + '" value="' + v + '"' + (r.op === v ? ' checked' : '') + '><label for="op-' + i.id + '-' + v + '">' + l + '</label>').join('') + '</div>' +
+        '<textarea data-com="' + i.id + '" placeholder="' + esc(i.ph || 'Comentario (opcional)') + '">' + esc(r.com || '') + '</textarea>' +
+        '</section>';
+    }).join('')).join('');
+
+  $('#v-nombre').value = state.nombre; $('#v-cargo').value = state.cargo; $('#v-fecha').value = state.fecha; $('#v-general').value = state.general;
+
+  function contar() {
+    const c = { ok: 0, cambios: 0, no: 0 };
+    items.forEach((i) => { const r = state.resp[i.id]; if (r && r.op) c[r.op]++; });
+    return { ...c, resp: c.ok + c.cambios + c.no, total: items.length };
+  }
+  function pintar() {
+    const c = contar();
+    $('#prog-txt').textContent = c.resp + ' de ' + c.total + ' puntos respondidos';
+    $('#prog-bar').style.width = (c.resp / c.total * 100) + '%';
+    $('#resumen').innerHTML = '<b>' + c.ok + '</b> conformes · <b>' + c.cambios + '</b> con cambios · <b>' + c.no + '</b> no conformes · <b>' + (c.total - c.resp) + '</b> sin responder';
+  }
+
+  $('#form').addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.type === 'radio') {
+      const id = t.name.replace('op-', '');
+      (state.resp[id] = state.resp[id] || {}).op = t.value;
+      const card = $('#item-' + id); card.className = 'item ' + t.value;
+      save(); pintar();
+    }
+  });
+  $('#form').addEventListener('input', (e) => {
+    const id = e.target.dataset && e.target.dataset.com;
+    if (id) { (state.resp[id] = state.resp[id] || {}).com = e.target.value; save(); }
+  });
+  [['#v-nombre', 'nombre'], ['#v-cargo', 'cargo'], ['#v-fecha', 'fecha'], ['#v-general', 'general']].forEach(([sel, k]) => $(sel).addEventListener('input', (e) => { state[k] = e.target.value; save(); }));
+
+  function resumenMd() {
+    const c = contar();
+    const lines = ['# Validación — Control de Supervisión', '',
+      '- **Validado por:** ' + (state.nombre || '(sin completar)'), '- **Cargo / empresa:** ' + (state.cargo || '(sin completar)'), '- **Fecha:** ' + (state.fecha || '(sin completar)'),
+      '- **Resultado:** ' + c.ok + ' conformes, ' + c.cambios + ' con cambios, ' + c.no + ' no conformes, ' + (c.total - c.resp) + ' sin responder', ''];
+    DATA.secciones.forEach((s) => {
+      lines.push('## ' + s.id + '. ' + s.titulo, '');
+      s.items.forEach((i) => {
+        const r = state.resp[i.id] || {};
+        lines.push('- **' + i.id + ' · ' + i.t + ':** ' + (r.op ? LABEL[r.op] : 'Sin responder'));
+        if (i.propuesta) lines.push('  - Propuesta: ' + i.propuesta);
+        if ((r.com || '').trim()) lines.push('  - Comentario: ' + r.com.trim().replace(/\n+/g, ' '));
+      });
+      lines.push('');
+    });
+    if ((state.general || '').trim()) lines.push('## Observaciones generales', '', state.general.trim(), '');
+    return lines.join('\n');
+  }
+  const msg = (t) => { $('#msg').textContent = t; };
+
+  $('#btn-descargar').addEventListener('click', () => {
+    try {
+      const blob = new Blob([resumenMd()], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'Validacion_Control_de_Supervision_' + (state.fecha || 'respuestas') + '.md';
+      document.body.appendChild(a); a.click(); a.remove();
+      msg('Se descargó el archivo. Si no aparece, usá "Ver resumen" o "Copiar resumen".');
+    } catch (e) { msg('No se pudo descargar en este navegador. Usá "Copiar resumen".'); }
+  });
+  $('#btn-copiar').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(resumenMd()); msg('Resumen copiado. Pegalo en un mail o documento.'); }
+    catch (e) { mostrar(); msg('No se pudo copiar automáticamente: seleccioná el texto de abajo y copialo.'); }
+  });
+  function mostrar() { const p = $('#preview'); p.style.display = 'block'; p.value = resumenMd(); p.select(); }
+  $('#btn-ver').addEventListener('click', () => { mostrar(); msg(''); });
+  $('#btn-borrar').addEventListener('click', () => {
+    if ($('#btn-borrar').dataset.sure !== '1') { $('#btn-borrar').dataset.sure = '1'; $('#btn-borrar').textContent = 'Tocá de nuevo para confirmar'; return; }
+    try { localStorage.removeItem(KEY); } catch (e) { /* nada */ }
+    location.reload();
+  });
+
+  pintar(); save();
+})();
+</script>
+</body>
+</html>

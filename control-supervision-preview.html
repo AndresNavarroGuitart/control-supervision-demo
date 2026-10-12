@@ -1,0 +1,1715 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CONTROL DE SUPERVISIÓN — preview</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a6fc4'/%3E%3Cpath d='M9 17l4.5 4.5L23 12' stroke='%23fff' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    /* Mismos tokens y componentes que el Tablero Operativo (administrador-preview.html),
+       copiados acá a propósito para que este archivo sea 100% independiente. */
+    :root {
+      color-scheme: light;
+      --page:      #f7f6f2;
+      --surface:   #fdfdfb;
+      --raised:    #ffffff;
+      --ink:       #1c1b18;
+      --ink-2:     #5f5c55;
+      --muted:     #8f8c83;
+      --hairline:  #e7e5de;
+      --wash:      rgba(28, 27, 24, 0.035);
+      --accent:    #2a6fc4;
+      --accent-ink: #ffffff;
+      --accent-wash: rgba(42, 111, 196, 0.09);
+      --status-good: #0ca30c;
+      --status-warn: #d99a00;
+      --status-crit: #c73a3a;
+      --good-wash: rgba(12, 163, 12, 0.10);
+      --warn-wash: rgba(217, 154, 0, 0.12);
+      --crit-wash: rgba(199, 58, 58, 0.09);
+      --shadow: 0 1px 2px rgba(28, 27, 24, 0.04), 0 10px 28px -14px rgba(28, 27, 24, 0.10);
+      --ring: 0 0 0 2px var(--page), 0 0 0 4px var(--accent);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --page:      #131311;
+        --surface:   #1b1b18;
+        --raised:    #21211e;
+        --ink:       #f4f3ef;
+        --ink-2:     #b8b5ac;
+        --muted:     #8f8c83;
+        --hairline:  #2b2b27;
+        --wash:      rgba(244, 243, 239, 0.045);
+        --accent:    #5b96e0;
+        --accent-ink: #10131a;
+        --accent-wash: rgba(91, 150, 224, 0.14);
+        --status-warn: #e0b23e;
+        --status-crit: #d96666;
+        --good-wash: rgba(12, 163, 12, 0.16);
+        --warn-wash: rgba(224, 178, 62, 0.16);
+        --crit-wash: rgba(217, 102, 102, 0.14);
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -16px rgba(0, 0, 0, 0.45);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI Variable Display', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+      background: var(--page); color: var(--ink);
+      max-width: 1080px; margin: 0 auto; padding: 1.6rem 1.2rem 5rem; line-height: 1.55;
+    }
+    a { color: var(--accent); }
+    .back-link { display: inline-block; color: var(--accent); text-decoration: none; font-weight: 500; font-size: .88rem; cursor: pointer; }
+    .back-link:hover { text-decoration: underline; }
+    .preview-flag {
+      background: var(--accent-wash); border: 1px dashed var(--accent); border-radius: 10px;
+      padding: .6rem .9rem; font-size: .82rem; color: var(--ink-2); margin-bottom: 1.2rem;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 650; letter-spacing: -0.022em; line-height: 1.15; margin: 0 0 .15rem; }
+    .muted { color: var(--muted); font-size: .85rem; }
+
+    .tabs { display: flex; gap: .15rem; margin-top: 1rem; border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
+    .tabs a { padding: .5rem .95rem; text-decoration: none; color: var(--ink-2); font-weight: 500; font-size: .92rem; border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 9px 9px 0 0; }
+    .tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+
+    h2 { font-size: 1.04rem; font-weight: 600; letter-spacing: -0.012em; margin: 2.2rem 0 .8rem; }
+    h3 { font-size: .95rem; font-weight: 600; margin: 0 0 .6rem; }
+
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: .9rem; margin-top: 1.2rem; }
+    .tile { background: var(--surface); border-radius: 14px; padding: 1rem 1.1rem .9rem; box-shadow: var(--shadow); }
+    .tile b { display: block; font-size: 2.05rem; font-weight: 650; letter-spacing: -0.025em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .tile small { color: var(--ink-2); font-size: .8rem; font-weight: 500; }
+    .tile.warn b { color: var(--status-warn); }
+    .tile.accent b { color: var(--accent); }
+    .tile.good b { color: var(--status-good); }
+    .tile.crit b { color: var(--status-crit); }
+
+    .table-wrap { overflow-x: auto; border-radius: 14px; box-shadow: var(--shadow); }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; background: var(--surface); }
+    th, td { text-align: left; padding: .6rem .75rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    th { color: var(--muted); font-weight: 550; font-size: .78rem; letter-spacing: .015em; background: var(--wash); white-space: nowrap; }
+    .code { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: .85em; letter-spacing: .01em; white-space: nowrap; }
+    .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.clickable { cursor: pointer; }
+    tr.clickable:hover td { background: var(--wash); }
+    tr.row-crit td:first-child { box-shadow: inset 3px 0 0 var(--status-crit); }
+
+    .badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .74rem; font-weight: 500; padding: .12rem .55rem; border: 1px solid var(--hairline); border-radius: 999px; color: var(--ink-2); background: var(--raised); white-space: nowrap; }
+    .chip { display: inline-block; width: 7px; height: 7px; border-radius: 3px; }
+    .chip.mutedc { background: var(--muted); }
+    .chip.accent { background: var(--accent); }
+    .chip.warn { background: var(--status-warn); }
+    .chip.good { background: var(--status-good); }
+    .chip.crit { background: var(--status-crit); }
+
+    .pill { display: inline-flex; align-items: center; gap: .38rem; font-size: .76rem; font-weight: 550; padding: .08rem .55rem; border-radius: 999px; border: 1px solid; white-space: nowrap; margin-top: .2rem; }
+    .pill.crit { border-color: var(--status-crit); color: var(--status-crit); }
+    .pill.warn { border-color: var(--status-warn); color: var(--status-warn); }
+    .pill.good { border-color: var(--status-good); color: var(--status-good); }
+    .pill.mute { border-color: var(--hairline); color: var(--ink-2); }
+
+    .card { background: var(--surface); border-radius: 14px; padding: .9rem 1.1rem; margin: .6rem 0; box-shadow: var(--shadow); }
+    .row { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; margin-top: .6rem; }
+    .empty { color: var(--muted); font-size: .85rem; padding: .6rem 0; }
+
+    input, textarea, select, button { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--hairline); border-radius: 9px; padding: .42rem .65rem; transition: border-color .18s ease, background-color .18s ease; }
+    textarea { width: 100%; resize: vertical; min-height: 70px; }
+    select { width: auto; min-width: 140px; }
+    button { cursor: pointer; font-weight: 500; }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    button.primary:hover:not(:disabled) { filter: brightness(1.07); }
+    button.outline { border-color: var(--accent); color: var(--accent); background: transparent; font-weight: 600; }
+    button.small { font-size: .8rem; padding: .3rem .55rem; }
+    :focus-visible { outline: none; box-shadow: var(--ring); border-radius: 6px; }
+
+    .filters { display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
+    .filters input[type="search"] { min-width: 210px; flex: 1; }
+    .count-note { color: var(--muted); font-size: .82rem; margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    #toast { position: fixed; left: 50%; bottom: 1.4rem; transform: translate(-50%, .6rem); background: var(--ink); color: var(--page); padding: .55rem 1rem; border-radius: 10px; font-size: .88rem; font-weight: 500; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .22s ease, transform .22s ease; z-index: 90; max-width: min(90vw, 44ch); }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .confirm-backdrop {
+      position: fixed; inset: 0; background: rgba(8, 20, 35, .55); z-index: 70;
+      display: flex; align-items: flex-start; justify-content: center; padding: 2.5rem 1rem; overflow-y: auto;
+    }
+    .confirm-box {
+      background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+      padding: 1.3rem 1.4rem; max-width: 560px; width: 100%; box-shadow: var(--shadow);
+    }
+    .confirm-box h3 { font-size: 1.05rem; margin-bottom: .2rem; }
+    .confirm-box .row { justify-content: flex-end; }
+
+    /* ---- Específico de Control de Supervisión ---- */
+    .sup-card { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent-wash); color: var(--accent); font-weight: 650; display: flex; align-items: center; justify-content: center; flex: none; letter-spacing: .02em; }
+    .sup-card .sup-meta { display: flex; gap: 1.4rem; flex-wrap: wrap; margin-left: auto; font-size: .82rem; color: var(--ink-2); }
+    .sup-card .sup-meta b { display: block; color: var(--ink); font-size: .92rem; }
+
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .8rem 1.4rem; margin-top: .9rem; }
+    .meta-grid dt { font-size: .74rem; color: var(--muted); font-weight: 550; letter-spacing: .015em; }
+    .meta-grid dd { margin: 0; font-size: .9rem; }
+    .meta-grid div { min-width: 0; }
+
+    .intro { font-size: .9rem; color: var(--ink-2); margin: 0 0 .5rem; }
+    .criteria { display: grid; gap: .45rem; margin-top: .7rem; }
+    .crit-row { display: grid; grid-template-columns: 30px 1fr; gap: .7rem; align-items: start; font-size: .85rem; color: var(--ink-2); }
+    .crit-row b.sc-badge { width: 30px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .85rem; }
+    .crit-row strong { color: var(--ink); }
+    .sc-1, .sc-2 { background: var(--status-crit); }
+    .sc-3 { background: var(--status-warn); }
+    .sc-4, .sc-5 { background: var(--status-good); }
+
+    .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; flex-wrap: wrap; }
+    .sec-head h2 { margin: 0; }
+    .sec-question { color: var(--ink-2); font-size: .88rem; margin: .25rem 0 .7rem; }
+    .item-row { border: 1px solid var(--hairline); border-radius: 12px; padding: .65rem .85rem; margin-top: .5rem; background: var(--surface); }
+    .item-row.lvl-crit { border-color: var(--status-crit); background: var(--crit-wash); }
+    .item-row.lvl-warn { border-color: var(--status-warn); background: var(--warn-wash); }
+    .item-head { display: flex; gap: .8rem; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .item-name { font-weight: 500; flex: 1; min-width: 180px; }
+    .scores { display: inline-flex; gap: .3rem; flex-wrap: wrap; }
+    .sc { width: 38px; height: 34px; padding: 0; border-radius: 8px; font-weight: 650; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+    .sc.na { width: auto; padding: 0 .65rem; font-size: .8rem; }
+    .sc.selected[data-v="1"], .sc.selected[data-v="2"] { background: var(--status-crit); border-color: var(--status-crit); color: #fff; }
+    .sc.selected[data-v="3"] { background: var(--status-warn); border-color: var(--status-warn); color: #fff; }
+    .sc.selected[data-v="4"], .sc.selected[data-v="5"] { background: var(--status-good); border-color: var(--status-good); color: #fff; }
+    .sc.selected[data-v="na"] { background: var(--muted); border-color: var(--muted); color: #fff; }
+    .item-hint { margin-top: .5rem; font-size: .82rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .item-hint.crit { color: var(--status-crit); }
+    .item-hint.warn { color: var(--ink-2); }
+    .item-hint b { font-weight: 600; }
+
+    .field-label { display: block; font-size: .78rem; font-weight: 600; color: var(--ink-2); margin-bottom: .25rem; }
+    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .7rem; margin-top: .8rem; }
+    .field-grid input, .field-grid select { width: 100%; }
+
+    .sec-comments { margin-top: 1rem; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .7rem; margin-top: .7rem; }
+    .photo-card { background: var(--raised); border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .photo-card img { width: 100%; height: 115px; object-fit: cover; display: block; background: var(--wash); }
+    .photo-card .pc-body { padding: .45rem .55rem .55rem; display: flex; flex-direction: column; gap: .35rem; }
+    .photo-card input { width: 100%; font-size: .78rem; padding: .28rem .45rem; min-width: 0; }
+
+    .progress { height: 8px; background: var(--wash); border-radius: 6px; overflow: hidden; margin-top: .35rem; }
+    .progress > span { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .2s ease; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+    .summary-grid b { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+    .summary-grid .sub { font-size: .76rem; color: var(--muted); }
+
+    .sticky-bar { position: sticky; bottom: .8rem; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; box-shadow: var(--shadow); padding: .7rem .9rem; margin-top: 1.6rem; display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; z-index: 20; }
+    .sticky-bar .spacer { margin-left: auto; }
+    .alert-box { border-left: 4px solid var(--status-crit); background: var(--crit-wash); border-radius: 10px; padding: .7rem 1rem; margin-top: 1rem; font-size: .88rem; }
+    .alert-box ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+    .alert-box.info { border-left-color: var(--accent); background: var(--accent-wash); margin: .6rem 0; }
+    .case-line { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; padding: .45rem 0; border-bottom: 1px solid var(--hairline); font-size: .88rem; }
+    .case-line:last-child { border-bottom: none; }
+    .tipo-badge.nc { border-color: var(--status-crit); color: var(--status-crit); }
+    .tipo-badge.obs { border-color: var(--status-warn); color: var(--status-warn); }
+    .tipo-badge.opm { border-color: var(--accent); color: var(--accent); }
+    .modal-form { display: grid; gap: .8rem; margin-top: .9rem; }
+    .modal-form select, .modal-form input[type="text"] { width: 100%; }
+    .modal-form .check { display: flex; gap: .5rem; align-items: center; font-size: .86rem; }
+
+    .btn-col { display: flex; flex-direction: column; gap: .35rem; min-width: 132px; }
+    .btn-col button { width: 100%; }
+    .geo-sim { margin-top: .5rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; font-size: .8rem; }
+    .geo-sim[hidden] { display: none; }
+    .geo-sim select { min-width: 0; font-size: .8rem; padding: .25rem .5rem; }
+    .map-box { position: relative; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--hairline); background: var(--wash); margin-top: .8rem; }
+    .map-inner { position: absolute; left: 0; top: 0; width: 560px; height: 380px; transform-origin: top left; }
+    .map-inner img.map-tile { position: absolute; width: 256px; height: 256px; max-width: none; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: none; user-select: none; -webkit-user-drag: none; }
+    .map-inner svg { position: absolute; left: 0; top: 0; z-index: 2; }
+    .map-attr { position: absolute; right: 6px; bottom: 4px; font-size: .62rem; background: rgba(255, 255, 255, .85); color: #333; padding: 0 .35rem; border-radius: 4px; z-index: 3; }
+    .map-legend { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: .78rem; color: var(--ink-2); margin-top: .5rem; }
+    .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
+    .geo-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .8rem; margin-top: .8rem; }
+    .geo-stats dt { font-size: .74rem; color: var(--muted); font-weight: 550; }
+    .geo-stats dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ---- Administración central ---- */
+    .head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .role-switch { display: inline-flex; align-items: center; gap: .35rem; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: .3rem .4rem; box-shadow: var(--shadow); }
+    .role-switch button { border: 1px solid transparent; background: transparent; font-size: .84rem; padding: .3rem .7rem; }
+    .role-switch button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; margin-top: 1rem; align-items: start; }
+    .dash-grid .card { margin: 0; }
+    .dash-grid h3 { margin: 0 0 .9rem; }
+    .bar-rank { display: flex; flex-direction: column; gap: .55rem; }
+    .bar-rank-row { display: grid; grid-template-columns: minmax(110px, 170px) 1fr auto; align-items: center; gap: .6rem; font-size: .82rem; }
+    .bar-rank-label { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-rank-track { background: var(--wash); border-radius: 4px; height: 14px; overflow: hidden; }
+    .bar-rank-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+    .bar-rank-fill.good { background: var(--status-good); }
+    .bar-rank-fill.warn { background: var(--status-warn); }
+    .bar-rank-fill.crit { background: var(--status-crit); }
+    .bar-rank-value { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; min-width: 3.2em; }
+    .alert-list { display: flex; flex-direction: column; }
+    .alert-item { display: flex; gap: .7rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid var(--hairline); font-size: .88rem; cursor: pointer; }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-item:hover { background: var(--wash); }
+    .alert-item .grow { flex: 1; min-width: 0; }
+    .alert-item .sub { color: var(--muted); font-size: .78rem; }
+    select.inline { min-width: 0; font-size: .82rem; padding: .25rem .45rem; }
+    select.inline.is-pend { border-color: var(--status-warn); color: var(--status-warn); font-weight: 600; }
+    select.inline.is-ok { border-color: var(--status-good); color: var(--status-good); font-weight: 600; }
+    select.inline.is-acl { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .motivo { max-width: 300px; font-size: .82rem; color: var(--ink-2); }
+    td button.small { white-space: nowrap; }
+    .photo-open { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: 0; background: none; cursor: zoom-in; line-height: 0; }
+    .photo-open::after { content: 'Ampliar'; position: absolute; right: 6px; bottom: 6px; font-size: .7rem; line-height: 1.3; background: rgba(0, 0, 0, .65); color: #fff; padding: .1rem .5rem; border-radius: 6px; opacity: 0; transition: opacity .15s ease; }
+    .photo-open:hover::after, .photo-open:focus-visible::after { opacity: 1; }
+    .photo-open:hover:not(:disabled) { border-color: transparent; }
+    .lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(8, 14, 24, .9); display: flex; align-items: center; justify-content: center; padding: 3.5rem 4rem 2rem; }
+    .lightbox figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: .8rem; max-width: 100%; }
+    .lightbox img { max-width: 100%; max-height: 74vh; border-radius: 10px; background: #fff; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
+    .lightbox figcaption { color: #fff; font-size: .9rem; text-align: center; display: flex; flex-direction: column; gap: .15rem; }
+    .lightbox figcaption span { color: rgba(255, 255, 255, .65); font-size: .78rem; }
+    .lightbox button { position: absolute; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .12); color: #fff; border-radius: 999px; width: 44px; height: 44px; font-size: 1.4rem; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+    .lightbox button:hover { background: rgba(255, 255, 255, .25); border-color: #fff; }
+    .lb-close { top: 1rem; right: 1rem; font-size: 1.1rem !important; }
+    .lb-nav.prev { left: 1rem; top: 50%; transform: translateY(-50%); }
+    .lb-nav.next { right: 1rem; top: 50%; transform: translateY(-50%); }
+    @media (max-width: 600px) { .lightbox { padding: 3.5rem 1rem 1.5rem; } .lb-nav.prev { left: .4rem; } .lb-nav.next { right: .4rem; } }
+    .page-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 1.4rem 0 0; }
+    .pop { position: fixed; z-index: 80; min-width: 250px; max-width: 320px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; box-shadow: var(--shadow); padding: .35rem; display: flex; flex-direction: column; gap: .1rem; }
+    .pop-title { font-size: .74rem; font-weight: 600; color: var(--muted); padding: .4rem .6rem .25rem; letter-spacing: .02em; }
+    .pop button { border: 1px solid transparent; background: transparent; text-align: left; padding: .45rem .6rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0; font-size: .88rem; }
+    .pop button .muted { font-size: .76rem; }
+    .pop button:hover { background: var(--wash); border-color: transparent; }
+    .reasig-flow { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; margin-top: .9rem; padding: .7rem .9rem; background: var(--wash); border-radius: 12px; }
+    .reasig-flow > div { display: flex; flex-direction: column; line-height: 1.3; }
+    .reasig-flow .arrow { font-size: 1.3rem; color: var(--accent); }
+    .modal-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+    @media (max-width: 520px) { .modal-form .two { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="preview-flag">
+    Maqueta del <b>Control de Supervisión</b> (vista del supervisor y de Administración central). Es un archivo independiente: no modifica el
+    Tablero Operativo ni se conecta al backend. Los datos (clientes, contactos, coordenadas, fechas) son de ejemplo y se pierden al recargar la página.
+    <div class="geo-sim">
+      <label for="geo-modo"><b>Solo para la demo</b> — ubicación del supervisor:</label>
+      <select id="geo-modo">
+        <option value="sitio">En el servicio (a 45 m)</option>
+        <option value="cerca">Cerca, pero afuera (a 400 m)</option>
+        <option value="lejos">Lejos (a 2,4 km)</option>
+        <option value="real">Usar la ubicación real de este dispositivo</option>
+      </select>
+    </div>
+  </div>
+
+  <header>
+    <div class="head-row">
+      <div>
+        <h1>Control de Supervisión</h1>
+        <p class="muted" id="head-sub"></p>
+      </div>
+      <div class="role-switch" role="group" aria-label="Ver como">
+        <span class="muted">Ver como:</span>
+        <button type="button" data-rol="sup" class="on">Supervisor</button>
+        <button type="button" data-rol="admin">Administración central</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Vistas"></nav>
+  </header>
+
+  <main id="app"></main>
+  <div id="toast" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Utilidades ----------
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const DAY = 86400000;
+  const HOY = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const pad = (n) => String(n).padStart(2, '0');
+  const fmtFecha = (d) => (d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : '—');
+  const fmtFechaHora = (d) => (d ? `${fmtFecha(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—');
+  const inputFecha = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const inputHora = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const diasHasta = (d) => Math.round((d - HOY) / DAY);
+  const $ = (sel, root) => (root || document).querySelector(sel);
+
+  let toastTimer = null;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  // ---------- El formulario (contenido de Form_Supervisores.xlsx) ----------
+  const INTRO = [
+    'Estimado Supervisor o Encargado, complete el siguiente formulario como evidencia de su control en el servicio.',
+    'En las primeras secciones identifique el servicio.',
+    'En la sección Evaluación debe calificar con un puntaje de 1 a 5, cada uno de los puntos que sean aplicables, en función de lo que observe en el recorrido.',
+    'En caso de ser necesario puede realizar los comentarios correspondientes.',
+  ];
+
+  const CRITERIOS = [
+    { n: 5, titulo: 'Excelente', desc: 'el servicio prestado tiene un nivel de excelencia.' },
+    { n: 4, titulo: 'Calidad aceptable', desc: 'el servicio prestado tiene un nivel aceptable pero puede mejorar.' },
+    { n: 3, titulo: 'Calidad Media', desc: 'el servicio prestado puede requerir de acciones correctivas a mediano plazo.' },
+    { n: 2, titulo: 'Calidad deficiente', desc: 'el servicio prestado requiere de acciones inmediatas y la evaluación de acciones correctivas a corto plazo.' },
+    { n: 1, titulo: 'Malo', desc: 'el servicio prestado requiere de acciones inmediatas y la evaluación de acciones correctivas a corto plazo.' },
+  ];
+
+  const SECCIONES = [
+    {
+      id: 'ext', titulo: 'Áreas de exteriores',
+      pregunta: '¿Cómo evalúa la Calidad del servicio prestado en las instalaciones mencionadas a continuación?',
+      items: [{ id: 'ext1', texto: 'Jardines' }, { id: 'ext2', texto: 'Playa de estacionamiento' }, { id: 'ext3', texto: 'Galerias' }, { id: 'ext4', texto: 'Ingresos' }],
+      comentario: 'A continuación puede realizar los comentarios que considere necesarios sobre las Áreas Exteriores',
+    },
+    {
+      id: 'int', titulo: 'Áreas internas',
+      pregunta: '¿Cómo evalúa la Calidad del servicio prestado en las instalaciones mencionadas a continuación?',
+      items: [{ id: 'int1', texto: 'Pisos' }, { id: 'int2', texto: 'Zócalos' }, { id: 'int3', texto: 'Líneas de cajas' }, { id: 'int4', texto: 'Mall' }, { id: 'int5', texto: 'Salón de ventas' }],
+      comentario: 'A continuación puede realizar los comentarios que considere necesarios sobre las Áreas internas',
+    },
+    {
+      id: 'otr', titulo: 'Otros sectores',
+      pregunta: '¿Cómo evalúa la Calidad del servicio prestado en las instalaciones mencionadas a continuación?',
+      items: [{ id: 'otr1', texto: 'Oficinas' }, { id: 'otr2', texto: 'Baños' }, { id: 'otr3', texto: 'Retiro de residuos' }, { id: 'otr4', texto: 'Escaleras/Ascensores' }, { id: 'otr5', texto: 'Aberturas, Vidrios' }, { id: 'otr6', texto: 'Estructuras elevadas' }],
+      comentario: 'A continuación puede realizar los comentarios que considere necesarios sobre las áreas evaluadas',
+    },
+    {
+      id: 'asp', titulo: 'Otros aspectos del servicio',
+      pregunta: '¿Cómo evalúa la Calidad de cada uno de los siguientes aspectos del servicio?',
+      items: [{ id: 'asp1', texto: 'Estado de maquinarias y elementos' }, { id: 'asp2', texto: 'Disponibilidad de insumos' }, { id: 'asp3', texto: 'Comportamiento del personal' }, { id: 'asp4', texto: 'Estado y disponibilidad de uniformes y credenciales' }],
+      comentario: 'A continuación puede realizar los comentarios que considere necesarios sobre los aspectos evaluados',
+    },
+  ];
+  const ITEMS = SECCIONES.flatMap((s) => s.items.map((i) => ({ ...i, sec: s.id })));
+  const ITEM = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
+  const SEC = Object.fromEntries(SECCIONES.map((s) => [s.id, s]));
+
+  const HINT_CRIT = 'Requiere acciones inmediatas y la evaluación de acciones correctivas a corto plazo.';
+  const HINT_WARN = 'Puede requerir acciones correctivas a mediano plazo.';
+
+  // ---------- Datos de ejemplo ----------
+  const SUPS = {
+    mib: { key: 'mib', nombre: 'Marcos Ibáñez', legajo: 'SUP-014', zona: 'Centro (Córdoba · San Luis)', mail: 'mibanez@ejemplo.com.ar', tel: '0351 555-0142' },
+    lfe: { key: 'lfe', nombre: 'Lucía Ferrari', legajo: 'SUP-009', zona: 'Buenos Aires', mail: 'lferrari@ejemplo.com.ar', tel: '011 5555-0143' },
+    dsa: { key: 'dsa', nombre: 'Diego Salas', legajo: 'SUP-021', zona: 'Cuyo y Patagonia', mail: 'dsalas@ejemplo.com.ar', tel: '0261 555-0144' },
+    nro: { key: 'nro', nombre: 'Natalia Rojas', legajo: 'SUP-017', zona: 'Noroeste (Tucumán · Catamarca)', mail: 'nrojas@ejemplo.com.ar', tel: '0381 555-0145' },
+  };
+  const SUP_ACTIVO = 'mib';              // el supervisor con el que se ve la vista "Supervisor"
+  const SUPERVISOR = SUPS[SUP_ACTIVO];
+  const FRECUENCIA_DIAS = { Semanal: 7, Quincenal: 15, Mensual: 30 };
+
+  const CLIENTES = [
+    { key: 'amg', nombre: 'AMG OBRAS CIVILES', empresa: 'AMG Construcciones', provincia: 'Córdoba', localidad: 'Córdoba', domicilio: 'Av. Circunvalación Km 6, obrador central', contacto: 'Laura Medina', tel: '0351 555-0101', mail: 'lmedina@ejemplo.com.ar', horario: 'Lun a Vie · 06:00 a 14:00', personal: 4, hs: 640, noAplica: ['ext1', 'ext2', 'int3', 'int4', 'int5'] },
+    { key: 'wrc', nombre: 'WAL MART RIO CUARTO', empresa: 'Supermercado', provincia: 'Córdoba', localidad: 'Río Cuarto', domicilio: 'Ruta 8 Km 603', contacto: 'Gustavo Ferreyra', tel: '0358 555-0102', mail: 'gferreyra@ejemplo.com.ar', horario: 'Lun a Dom · 05:00 a 13:00', personal: 9, hs: 1480, noAplica: [] },
+    { key: 'wco', nombre: 'WAL MART CORDOBA OESTE', empresa: 'Supermercado', provincia: 'Córdoba', localidad: 'Córdoba', domicilio: 'Av. Rafael Núñez 5300', contacto: 'Silvia Paredes', tel: '0351 555-0103', mail: 'sparedes@ejemplo.com.ar', horario: 'Lun a Dom · 05:00 a 13:00', personal: 11, hs: 1720, noAplica: [] },
+    { key: 'tad', nombre: 'TADICOR', empresa: 'Tadicor S.A.', provincia: 'Córdoba', localidad: 'Córdoba', domicilio: 'Av. Sabattini 2100', contacto: 'Julián Roldán', tel: '0351 555-0104', mail: 'jroldan@ejemplo.com.ar', horario: 'Lun a Sáb · 06:00 a 12:00', personal: 3, hs: 360, noAplica: ['ext1', 'int4', 'otr6'] },
+    { key: 'mvc', nombre: 'MULTIVOICE II (AV. COLÓN 4500)', empresa: 'Multivoice', provincia: 'Córdoba', localidad: 'Córdoba', domicilio: 'Av. Colón 4500', contacto: 'Marina Quiroga', tel: '0351 555-0105', mail: 'mquiroga@ejemplo.com.ar', horario: 'Lun a Vie · 18:00 a 22:00', personal: 5, hs: 700, noAplica: ['ext1', 'ext2', 'ext3', 'int3', 'int4', 'int5', 'otr6'] },
+    { key: 'chc', nombre: 'CH + CATAMARCA', empresa: 'Supermercado', provincia: 'Catamarca', localidad: 'San Fernando del Valle de Catamarca', domicilio: 'Av. Belgrano 1800', contacto: 'Ramiro Acosta', tel: '0383 555-0106', mail: 'racosta@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 6, hs: 860, noAplica: ['ext1'] },
+    { key: 'cvm', nombre: 'CHANGO + V. MERCEDES SUC. 1055', empresa: 'Supermercado', provincia: 'San Luis', localidad: 'Villa Mercedes', domicilio: 'Av. España 1055', contacto: 'Carolina Vega', tel: '02657 55-0107', mail: 'cvega@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 6, hs: 820, noAplica: ['ext1'] },
+  ];
+  // Otros servicios, a cargo de los demás supervisores (datos de ejemplo)
+  CLIENTES.push(
+    { key: 'cla', nombre: 'CH + CLAYPOLE', empresa: 'Supermercado', provincia: 'Buenos Aires', localidad: 'Claypole', domicilio: 'Av. Presidente Perón 2400', contacto: 'Mariano Giuliani', tel: '011 5555-0108', mail: 'mgiuliani@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 7, hs: 980, noAplica: ['ext1'] },
+    { key: 'eas', nombre: 'EASY PILAR', empresa: 'Home center', provincia: 'Buenos Aires', localidad: 'Pilar', domicilio: 'Ruta 8 Km 50', contacto: 'Verónica Luna', tel: '0230 455-0109', mail: 'vluna@ejemplo.com.ar', horario: 'Lun a Dom · 06:00 a 14:00', personal: 8, hs: 1210, noAplica: ['int3'] },
+    { key: 'mai', nombre: 'CH + -MAIPU', empresa: 'Supermercado', provincia: 'Mendoza', localidad: 'Maipú', domicilio: 'Ruta 60 y Acceso Este', contacto: 'Héctor Videla', tel: '0261 555-0110', mail: 'hvidela@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 6, hs: 870, noAplica: ['ext1'] },
+    { key: 'mad', nombre: 'CHANGO MAS P. MADRYN', empresa: 'Supermercado', provincia: 'Chubut', localidad: 'Puerto Madryn', domicilio: 'Av. Roca 1500', contacto: 'Ariel Quintana', tel: '0280 455-0111', mail: 'aquintana@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 5, hs: 740, noAplica: ['ext1', 'otr6'] },
+    { key: 'rsa', nombre: 'CHANGO + RÍO SALÍ SUC. 1033', empresa: 'Supermercado', provincia: 'Tucumán', localidad: 'Río Salí', domicilio: 'Av. Gobernador del Campo 1033', contacto: 'Gabriela Ponce', tel: '0381 555-0112', mail: 'gponce@ejemplo.com.ar', horario: 'Lun a Dom · 05:30 a 13:30', personal: 6, hs: 850, noAplica: ['ext1'] },
+  );
+  const SUP_DE = { amg: 'mib', wrc: 'mib', wco: 'mib', tad: 'mib', mvc: 'mib', cvm: 'mib', cla: 'lfe', eas: 'lfe', mai: 'dsa', mad: 'dsa', chc: 'nro', rsa: 'nro' };
+  CLIENTES.forEach((c) => { c.sup = SUP_DE[c.key]; });
+  const CLIENTE = Object.fromEntries(CLIENTES.map((c) => [c.key, c]));
+
+  // ---------- Geolocalización ----------
+  // Coordenadas APROXIMADAS y de ejemplo (en el sistema real se cargan por servicio en la base de clientes).
+  const COORDS = { amg: [-31.4350, -64.2300], wrc: [-33.1230, -64.3350], wco: [-31.3720, -64.2330], tad: [-31.4305, -64.1750], mvc: [-31.4010, -64.2450], chc: [-28.4700, -65.7800], cvm: [-33.6740, -65.4620], cla: [-34.8040, -58.3410], eas: [-34.4420, -58.9100], mai: [-32.9520, -68.7870], mad: [-42.7690, -65.0380], rsa: [-26.8650, -65.2100] };
+  CLIENTES.forEach((c) => { [c.lat, c.lon] = COORDS[c.key]; });
+  const GEO_RADIO = 150;   // metros alrededor del servicio dentro de los cuales se considera "en el lugar" (propuesta; configurable por servicio)
+  const GEO_PREC = 100;    // precisión máxima del GPS que se acepta (metros)
+
+  const rad = (g) => (g * Math.PI) / 180;
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000; const dLat = rad(lat2 - lat1); const dLon = rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  const posDesde = (cl, metrosAlNorte) => ({ lat: cl.lat + metrosAlNorte / 111320, lon: cl.lon });
+  const GEO_ESTADO = {
+    ok: { txt: 'Ubicación verificada', cls: 'good' },
+    fuera: { txt: 'Fuera del radio permitido', cls: 'crit' },
+    precision: { txt: 'Precisión insuficiente', cls: 'warn' },
+  };
+
+  const CASO_TIPOS = ['No conformidad', 'Observación', 'Oportunidad de Mejora'];
+  const CASO_AFECTACIONES = [
+    'Dirección', 'Información documentada', 'Auditoria interna', 'Gestión de la mejora',
+    'Gestión Comercial', 'Prestación del Servicio', 'Compras y Logística', 'Gestión de RRHH',
+    'Mantenimiento de equipos',
+  ];
+  const DERIVAR_A = ['Administración central — Paola Giménez', 'Compras', 'Logística', 'Documentación', 'Uniforme', 'RR.HH — Córdoba e interior'];
+
+  function placeholderFoto(texto, hue) {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(${hue},45%,72%)'/><stop offset='1' stop-color='hsl(${hue},45%,46%)'/></linearGradient></defs><rect width='320' height='220' fill='url(#g)'/><text x='160' y='118' font-family='sans-serif' font-size='18' fill='white' text-anchor='middle'>${texto}</text></svg>`;
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+  const hash = (s) => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+
+  // Datos de ejemplo con algo de variación: algunas secciones y servicios puntúan más bajo que otros.
+  const SESGO_SEC = { ext: 8, int: 6, otr: 22, asp: 34 };                       // % de ítems que bajan a 3
+  const SESGO_CLI = { mad: 26, eas: 18, cla: 12, mai: 6, rsa: 0, chc: 8, mvc: 10 };
+  function buildScores(seed, overrides, noAplica, cl) {
+    const a = {};
+    ITEMS.forEach((it) => {
+      if (noAplica.includes(it.id)) { a[it.id] = 'na'; return; }
+      const h = hash(seed + it.id);
+      let v = h % 3 === 0 ? 5 : 4;
+      if (hash(seed + it.id + 'b') % 100 < (SESGO_SEC[it.sec] || 0) + (SESGO_CLI[cl] || 0)) v = 3;
+      a[it.id] = overrides[it.id] !== undefined ? overrides[it.id] : v;
+    });
+    return a;
+  }
+
+  let seqControl = 0;
+  let seqCaso = 0;
+  const nuevoControlId = () => `CS-${String(++seqControl).padStart(4, '0')}`;
+  const nuevoCasoId = () => `C-SUP-${String(++seqCaso).padStart(4, '0')}`;
+  const nuevoControl = (cliente, frecuencia, ultimo, plazo) => ({
+    id: nuevoControlId(), cliente, frecuencia, ultimo, plazo, estado: 'Pendiente',
+    answers: {}, comentarios: {}, photos: [], completoPor: 'Supervisor', completoNombre: SUPS[CLIENTE[cliente].sup].nombre,
+    visitaFecha: '', ingreso: '', egreso: '', realizadoAt: null, casosIds: [],
+    geo: null, geoFin: null, geoMotivo: '', revision: null,
+    sup: null,      // supervisor asignado a este control; null = el supervisor habitual del servicio
+    reasig: null,   // última reasignación: { de, a, motivo, detalle, at }
+  });
+
+  const controles = [];
+  const casosGenerados = [];
+
+  // Historial: [cliente, frecuencia, días atrás, puntajes puntuales, comentarios por sección]
+  [
+    ['wco', 'Semanal', -24, { ext2: 3 }, {}],
+    ['wco', 'Semanal', -17, {}, {}],
+    ['wco', 'Semanal', -10, { int2: 2 }, { int: 'Zócalos de las líneas de cajas 4 a 6 con suciedad acumulada.' }],
+    ['wrc', 'Quincenal', -30, {}, {}],
+    ['wrc', 'Quincenal', -15, { otr2: 3 }, { otr: 'Baño de clientes con reposición de papel demorada.' }],
+    ['amg', 'Mensual', -58, {}, {}],
+    ['amg', 'Mensual', -28, { otr3: 2 }, { otr: 'Retiro de residuos de obra demorado: contenedor desbordado.' }],
+    ['tad', 'Semanal', -10, {}, {}],
+    ['tad', 'Semanal', -3, {}, {}],
+    ['mvc', 'Quincenal', -9, { asp2: 3 }, { asp: 'Faltan insumos de higiene personal en pañol.' }],
+    ['chc', 'Quincenal', -6, { ext2: 3 }, {}],
+    ['cvm', 'Mensual', -17, {}, {}],
+    // Servicios de los otros supervisores
+    ['cla', 'Quincenal', -32, {}, {}],
+    ['cla', 'Quincenal', -12, { int2: 3 }, {}],
+    ['eas', 'Mensual', -45, {}, {}],
+    ['eas', 'Mensual', -15, { otr2: 2 }, { otr: 'Baños de público sin reposición de jabón ni toallas durante el turno tarde.' }],
+    ['mai', 'Quincenal', -20, {}, {}],
+    ['mai', 'Quincenal', -5, { ext2: 3 }, {}],
+    ['mad', 'Mensual', -38, { asp3: 2 }, { asp: 'Personal sin credencial visible y con el uniforme incompleto en el turno mañana.' }],
+    ['rsa', 'Quincenal', -29, {}, {}],
+    ['rsa', 'Quincenal', -14, {}, {}],
+  ].forEach(([cl, frec, dias, over, coms], i) => {
+    const d = addDays(HOY, dias);
+    d.setHours(8 + (i % 6), 5 * (i % 9), 0, 0);
+    const c = nuevoControl(cl, frec, addDays(d, -FRECUENCIA_DIAS[frec]), d);
+    c.estado = 'Realizado'; c.realizadoAt = d;
+    c.answers = buildScores(cl + dias, over, CLIENTE[cl].noAplica, cl);
+    c.comentarios = coms;
+    c.completoPor = i % 4 === 3 ? 'Encargado' : 'Supervisor';
+    c.completoNombre = c.completoPor === 'Encargado' ? CLIENTE[cl].contacto : SUPS[CLIENTE[cl].sup].nombre;
+    c.visitaFecha = inputFecha(d); c.ingreso = inputHora(d); c.egreso = inputHora(new Date(d.getTime() + 70 * 60000));
+    // Ubicación registrada al ingresar y al finalizar (el servicio MULTIVOICE es un caso de excepción de ejemplo)
+    const cli = CLIENTE[cl];
+    const MOTIVOS_EXC = {
+      mvc: 'El servicio estaba cerrado por obras; el encargado me recibió en la sucursal vecina para recorrer los sectores operativos.',
+      'eas-15': 'No me dejaron ingresar por el acceso de personal; hice el recorrido desde el depósito de la ruta, a unos 500 m.',
+    };
+    const motivoExc = MOTIVOS_EXC[cl] || MOTIVOS_EXC[`${cl}${dias}`];
+    const excepcion = !!motivoExc;
+    const d1 = excepcion ? 520 + (hash(cl) % 160) : 25 + (hash(cl + dias) % 70);
+    const d2 = excepcion ? d1 + 15 : d1 + 12;
+    const mkGeo = (dist, at) => ({ ...posDesde(cli, dist), acc: 8 + (hash(cl) % 12), dist, estado: dist <= GEO_RADIO ? 'ok' : 'fuera', at, modo: 'Simulada (demo)' });
+    c.geo = mkGeo(d1, new Date(d.getTime() - 60000));
+    c.geoFin = mkGeo(d2, new Date(d.getTime() + 70 * 60000));
+    if (excepcion) { c.geoMotivo = motivoExc; c.revision = { estado: cl === 'mvc' ? 'Aprobada' : 'Pendiente' }; }
+    Object.keys(coms).forEach((sec, k) => c.photos.push({ url: placeholderFoto('Foto de ejemplo', 200 + i * 20 + k * 40), caption: 'Hallazgo en ' + SEC[sec].titulo.toLowerCase(), sec }));
+    controles.push(c);
+  });
+
+  // Casos de ejemplo ya generados desde controles anteriores
+  [
+    { cl: 'wco', dias: -10, item: 'int2', tipo: 'No conformidad', afect: 'Prestación del Servicio', der: 'Administración central — Paola Giménez' },
+    { cl: 'amg', dias: -28, item: 'otr3', tipo: 'No conformidad', afect: 'Prestación del Servicio', der: 'Administración central — Paola Giménez', estado: 'En tratamiento' },
+    { cl: 'eas', dias: -15, item: 'otr2', tipo: 'No conformidad', afect: 'Prestación del Servicio', der: 'Administración central — Paola Giménez', estado: 'Derivado' },
+    { cl: 'mad', dias: -38, item: 'asp3', tipo: 'No conformidad', afect: 'Gestión de RRHH', der: 'Uniforme', estado: 'Derivado' },
+  ].forEach(({ cl, dias, item, tipo, afect, der, estado }) => {
+    const ctl = controles.find((c) => c.cliente === cl && diasHasta(c.realizadoAt) === dias);
+    const caso = {
+      id: nuevoCasoId(), fecha: ctl.realizadoAt, cliente: cl, controlId: ctl.id, tipo, afectacion: afect, derivadoA: der,
+      descripcion: `Control ${ctl.id} — ${ITEM[item].texto} (puntaje ${ctl.answers[item]}): ${ctl.comentarios[ITEM[item].sec]}`,
+      fotos: ctl.photos.length, estado: estado || 'Derivado',
+    };
+    casosGenerados.push(caso); ctl.casosIds.push(caso.id);
+  });
+
+  // Pendientes: un control por servicio, con su frecuencia. [cliente, frecuencia, plazo (días desde hoy), estado]
+  [
+    ['wco', 'Semanal', -3, 'Pendiente'],
+    ['wrc', 'Quincenal', 0, 'En curso'],
+    ['amg', 'Mensual', 2, 'Pendiente'],
+    ['tad', 'Semanal', 4, 'Pendiente'],
+    ['mvc', 'Quincenal', 6, 'Pendiente'],
+    ['chc', 'Quincenal', 9, 'Pendiente'],
+    ['cvm', 'Mensual', 13, 'Pendiente'],
+    ['cla', 'Quincenal', 3, 'Pendiente'],
+    ['eas', 'Mensual', 12, 'Pendiente'],
+    ['mai', 'Quincenal', 10, 'Pendiente'],
+    ['mad', 'Mensual', -8, 'Pendiente'],
+    ['rsa', 'Quincenal', 1, 'Pendiente'],
+  ].forEach(([cl, frec, plazo, estado]) => {
+    const prev = controles.filter((c) => c.cliente === cl && c.estado === 'Realizado').sort((a, b) => b.realizadoAt - a.realizadoAt)[0];
+    const c = nuevoControl(cl, frec, prev ? prev.realizadoAt : null, addDays(HOY, plazo));
+    c.estado = estado;
+    controles.push(c);
+  });
+
+  // Borrador del control "En curso": algunos puntajes ya cargados
+  (function () {
+    const c = controles.find((x) => x.estado === 'En curso');
+    c.visitaFecha = inputFecha(HOY); c.ingreso = '09:40';
+    Object.assign(c.answers, { ext1: 'na', ext2: 4, ext3: 4, ext4: 5, int1: 4, int2: 2, int3: 4 });
+    c.comentarios.int = 'Zócalos de góndolas del pasillo 7 sin limpiar.';
+  })();
+
+  // ---------- Cálculos ----------
+  const esNum = (v) => typeof v === 'number';
+  const promedio = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+  const fmtProm = (x) => (x === null ? '—' : x.toFixed(1).replace('.', ','));
+  const puntajes = (c, sec) => ITEMS.filter((i) => !sec || i.sec === sec).map((i) => c.answers[i.id]).filter(esNum);
+  const promedioDe = (c, sec) => promedio(puntajes(c, sec));
+  const criticosDe = (c) => ITEMS.filter((i) => esNum(c.answers[i.id]) && c.answers[i.id] <= 2);
+  const mediosDe = (c) => ITEMS.filter((i) => c.answers[i.id] === 3);
+  const evaluados = (c) => ITEMS.filter((i) => c.answers[i.id] !== undefined).length;
+
+  function faltantes(c) {
+    const out = [];
+    SECCIONES.forEach((s) => {
+      const n = s.items.filter((i) => c.answers[i.id] === undefined).length;
+      if (n) out.push(`Faltan calificar ${n} ítem${n > 1 ? 's' : ''} en “${s.titulo}” (si no aplica, marcá N/A)`);
+    });
+    if (!(c.completoNombre || '').trim()) out.push('Indicá el nombre de quien completa el formulario');
+    if (!c.visitaFecha) out.push('Indicá la fecha de la visita');
+    if (!c.geo) out.push('Registrá tu ubicación (check-in) en el servicio');
+    else if (c.geo.estado !== 'ok' && !(c.geoMotivo || '').trim()) out.push('Tu ubicación no quedó verificada: indicá el motivo para dejar el control con excepción');
+    return out;
+  }
+
+  // ---------- Estado de la app ----------
+  const app = $('#app');
+  const state = {
+    rol: 'sup', view: 'controles', controlId: null, origen: 'controles', geoModo: 'sitio',
+    filtros: { q: '', estado: 'todos', frecuencia: '', cliente: '', orden: 'plazo' },       // vista del supervisor
+    aFiltros: { q: '', estado: 'todos', sup: '' },                                          // vista de Administración
+  };
+  $('#geo-modo').addEventListener('change', (e) => { state.geoModo = e.target.value; });
+  const byId = (id) => controles.find((c) => c.id === id);
+  // Datos del supervisor que está usando la vista "Supervisor"
+  // El supervisor de un control es el habitual del servicio, salvo que Administración lo haya reasignado.
+  const supDe = (c) => SUPS[c.sup || CLIENTE[c.cliente].sup];
+  const supDeCaso = (x) => { const k = byId(x.controlId); return k ? supDe(k) : SUPS[CLIENTE[x.cliente].sup]; };
+  const misControles = () => controles.filter((c) => supDe(c).key === SUP_ACTIVO);
+  const misClientes = () => CLIENTES.filter((cl) => cl.sup === SUP_ACTIVO || controles.some((c) => c.cliente === cl.key && supDe(c).key === SUP_ACTIVO));
+  const misCasos = () => casosGenerados.filter((x) => supDeCaso(x).key === SUP_ACTIVO);
+
+  function plazoChip(c) {
+    if (c.estado === 'Realizado') return '';
+    const d = diasHasta(c.plazo);
+    if (d < 0) return `<span class="pill crit"><i class="chip crit"></i>Vencido hace ${-d} d</span>`;
+    if (d === 0) return '<span class="pill warn"><i class="chip warn"></i>Vence hoy</span>';
+    if (d <= 3) return `<span class="pill warn"><i class="chip warn"></i>Vence en ${d} d</span>`;
+    return `<span class="pill mute">En plazo · ${d} d</span>`;
+  }
+  // Un control es de solo lectura si ya se realizó, o siempre que se lo mire desde Administración central.
+  const soloLectura = (c) => c.estado === 'Realizado' || state.rol === 'admin';
+  const ESTADO_CHIP = { Pendiente: 'mutedc', 'En curso': 'warn', Realizado: 'good' };
+  const estadoBadge = (c) => `<span class="badge"><i class="chip ${ESTADO_CHIP[c.estado]}"></i>${c.estado}</span>`;
+  const tipoBadgeCls = (t) => (t === 'No conformidad' ? 'nc' : t === 'Observación' ? 'obs' : 'opm');
+  const promPill = (p) => (p === null ? '<span class="muted">—</span>' : `<span class="pill ${p >= 4 ? 'good' : p >= 3 ? 'warn' : 'crit'}">${fmtProm(p)} / 5</span>`);
+  const geoPill = (c) => (!c.geo ? '<span class="muted">—</span>' : c.geo.estado === 'ok'
+    ? `<span class="pill good"><i class="chip good"></i>Verificada · ${c.geo.dist} m</span>`
+    : `<span class="pill warn"><i class="chip warn"></i>Excepción · ${c.geo.dist} m</span>`);
+  const ultimoRealizado = (cl) => controles.filter((c) => c.cliente === cl && c.estado === 'Realizado').sort((a, b) => b.realizadoAt - a.realizadoAt)[0];
+
+  // ---------- Navegación ----------
+  const TABS = {
+    sup: [['controles', 'Mis controles'], ['realizados', 'Realizados'], ['casos', 'Casos generados'], ['clientes', 'Mis clientes']],
+    admin: [['panel', 'Panel'], ['acontroles', 'Controles'], ['excepciones', 'Excepciones de ubicación'], ['acasos', 'Casos recibidos'], ['supervisores', 'Supervisores']],
+  };
+  const SUBTITULO = {
+    sup: 'Tus controles periódicos en los servicios a cargo · Cada control se completa con el formulario de supervisión · Los hallazgos se pueden derivar como caso a Administración central',
+    admin: 'Administración central · Seguimiento de los controles de todos los supervisores, excepciones de ubicación y casos recibidos',
+  };
+  const VISTA_LABEL = { controles: 'Mis controles', realizados: 'Realizados', casos: 'Casos generados', clientes: 'Mis clientes', panel: 'Panel', acontroles: 'Controles', excepciones: 'Excepciones de ubicación', acasos: 'Casos recibidos', supervisores: 'Supervisores' };
+
+  function renderTabs() {
+    $('#tabs').innerHTML = TABS[state.rol].map(([v, l]) => `<a href="#" data-view="${v}" ${v === state.view ? 'aria-current="page"' : ''}>${l}</a>`).join('');
+  }
+  function go(view) {
+    state.view = view; state.controlId = null;
+    renderTabs();
+    ({ controles: viewControles, realizados: viewRealizados, casos: viewCasos, clientes: viewClientes,
+      panel: viewPanel, acontroles: viewAControles, excepciones: viewExcepciones, acasos: viewACasos, supervisores: viewSupervisores })[view]();
+    window.scrollTo({ top: 0 });
+  }
+  function setRol(rol) {
+    state.rol = rol; state.origen = rol === 'sup' ? 'controles' : 'panel';
+    document.querySelectorAll('.role-switch button').forEach((b) => b.classList.toggle('on', b.dataset.rol === rol));
+    $('#head-sub').textContent = SUBTITULO[rol];
+    $('.geo-sim').hidden = rol !== 'sup';
+    go(rol === 'sup' ? 'controles' : 'panel');
+  }
+  $('#tabs').addEventListener('click', (e) => { const a = e.target.closest('a[data-view]'); if (a) { e.preventDefault(); go(a.dataset.view); } });
+  document.querySelectorAll('.role-switch button').forEach((b) => b.addEventListener('click', () => setRol(b.dataset.rol)));
+
+  // ---------- Vista: Mis controles ----------
+  function viewControles() {
+    const controles = misControles();
+    const pend = controles.filter((c) => c.estado !== 'Realizado');
+    const vencidos = pend.filter((c) => diasHasta(c.plazo) < 0).length;
+    const semana = pend.filter((c) => { const d = diasHasta(c.plazo); return d >= 0 && d <= 7; }).length;
+    const mes = controles.filter((c) => c.estado === 'Realizado' && c.realizadoAt.getMonth() === HOY.getMonth() && c.realizadoAt.getFullYear() === HOY.getFullYear()).length;
+    const recientes = controles.filter((c) => c.estado === 'Realizado' && diasHasta(c.realizadoAt) >= -30);
+    const prom = promedio(recientes.map((c) => promedioDe(c)).filter((x) => x !== null));
+    const iniciales = SUPERVISOR.nombre.split(' ').map((p) => p[0]).join('').slice(0, 2);
+
+    app.innerHTML = `
+      <div class="card sup-card">
+        <div class="avatar">${esc(iniciales)}</div>
+        <div><b>${esc(SUPERVISOR.nombre)}</b><div class="muted">Legajo ${esc(SUPERVISOR.legajo)} · ${esc(SUPERVISOR.zona)}</div></div>
+        <div class="sup-meta">
+          <div><b>${misClientes().length}</b>servicios a cargo</div>
+          <div><b>${esc(SUPERVISOR.tel)}</b>${esc(SUPERVISOR.mail)}</div>
+        </div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><b>${pend.length}</b><small>controles pendientes</small></div>
+        <div class="tile warn"><b>${semana}</b><small>vencen esta semana</small></div>
+        <div class="tile crit"><b>${vencidos}</b><small>vencidos</small></div>
+        <div class="tile good"><b>${mes}</b><small>realizados este mes</small></div>
+        <div class="tile accent"><b>${fmtProm(prom)}</b><small>puntaje promedio (últimos 30 d, de 5)</small></div>
+      </div>
+      <h2>Controles a realizar</h2>
+      <div class="filters">
+        <input type="search" id="f-q" placeholder="Buscar por servicio, ID, localidad…" value="${esc(state.filtros.q)}">
+        <select id="f-estado">
+          ${[['todos', 'Todos los estados'], ['vencidos', 'Vencidos'], ['semana', 'Vencen esta semana'], ['Pendiente', 'Pendientes'], ['En curso', 'En curso (borrador)']].map(([v, l]) => `<option value="${v}" ${state.filtros.estado === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+        <select id="f-frecuencia">
+          <option value="">Todas las frecuencias</option>
+          ${Object.keys(FRECUENCIA_DIAS).map((f) => `<option ${state.filtros.frecuencia === f ? 'selected' : ''}>${f}</option>`).join('')}
+        </select>
+        <select id="f-cliente">
+          <option value="">Todos los servicios</option>
+          ${misClientes().map((c) => `<option value="${c.key}" ${state.filtros.cliente === c.key ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}
+        </select>
+        <select id="f-orden">
+          ${[['plazo', 'Orden: plazo más próximo'], ['cliente', 'Orden: servicio A-Z'], ['frecuencia', 'Orden: frecuencia']].map(([v, l]) => `<option value="${v}" ${state.filtros.orden === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+        <span class="count-note" id="f-count"></span>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Servicio / cliente</th><th>Frecuencia</th><th>Último control</th><th>Plazo</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="ctl-body"></tbody>
+      </table></div>
+      <p class="muted" style="margin-top:.6rem">Click en una fila para abrir el formulario de control.</p>`;
+
+    const bind = (id, key) => { $(id).addEventListener(key === 'q' ? 'input' : 'change', (e) => { state.filtros[key] = e.target.value; renderControlesBody(); }); };
+    bind('#f-q', 'q'); bind('#f-estado', 'estado'); bind('#f-frecuencia', 'frecuencia'); bind('#f-cliente', 'cliente'); bind('#f-orden', 'orden');
+    renderControlesBody();
+  }
+
+  function controlesFiltrados() {
+    const controles = misControles();
+    const f = state.filtros;
+    const q = f.q.trim().toLowerCase();
+    let lista = controles.filter((c) => c.estado !== 'Realizado');
+    if (q) lista = lista.filter((c) => { const cl = CLIENTE[c.cliente]; return `${c.id} ${cl.nombre} ${cl.localidad} ${cl.provincia}`.toLowerCase().includes(q); });
+    if (f.estado === 'vencidos') lista = lista.filter((c) => diasHasta(c.plazo) < 0);
+    else if (f.estado === 'semana') lista = lista.filter((c) => { const d = diasHasta(c.plazo); return d >= 0 && d <= 7; });
+    else if (f.estado === 'Pendiente' || f.estado === 'En curso') lista = lista.filter((c) => c.estado === f.estado);
+    if (f.frecuencia) lista = lista.filter((c) => c.frecuencia === f.frecuencia);
+    if (f.cliente) lista = lista.filter((c) => c.cliente === f.cliente);
+    const cmp = {
+      plazo: (a, b) => a.plazo - b.plazo,
+      cliente: (a, b) => CLIENTE[a.cliente].nombre.localeCompare(CLIENTE[b.cliente].nombre, 'es') || a.plazo - b.plazo,
+      frecuencia: (a, b) => FRECUENCIA_DIAS[a.frecuencia] - FRECUENCIA_DIAS[b.frecuencia] || a.plazo - b.plazo,
+    }[f.orden];
+    return lista.sort(cmp);
+  }
+
+  function renderControlesBody() {
+    const lista = controlesFiltrados();
+    const total = misControles().filter((c) => c.estado !== 'Realizado').length;
+    $('#f-count').textContent = `${lista.length} de ${total}`;
+    $('#ctl-body').innerHTML = lista.length ? lista.map((c) => {
+      const cl = CLIENTE[c.cliente];
+      const vencido = diasHasta(c.plazo) < 0;
+      const ult = ultimoRealizado(c.cliente);
+      return `<tr class="clickable ${vencido ? 'row-crit' : ''}" data-act="abrir-control" data-id="${c.id}">
+        <td class="code">${c.id}</td>
+        <td><b>${esc(cl.nombre)}</b><div class="muted">${esc(cl.localidad)}, ${esc(cl.provincia)}</div><div class="muted">Contacto: ${esc(cl.contacto)} · ${esc(cl.tel)}</div>${c.sup && c.reasig ? `<div><span class="pill warn" title="${esc(c.reasig.motivo)}">Reasignado a vos desde ${esc(SUPS[c.reasig.de].nombre)}</span></div>` : ''}</td>
+        <td>${c.frecuencia}</td>
+        <td class="num">${fmtFecha(c.ultimo)}${ult ? `<div>${promPill(promedioDe(ult))}</div>` : ''}</td>
+        <td class="num">${fmtFecha(c.plazo)}<div>${plazoChip(c)}</div></td>
+        <td>${estadoBadge(c)}</td>
+        <td><div class="btn-col">
+          <button class="primary small" data-act="abrir-control" data-id="${c.id}">${c.estado === 'En curso' ? 'Continuar' : 'Realizar control'}</button>
+          <button class="small" data-act="ver-mapa" data-cl="${c.cliente}">Ver mapa</button>
+        </div></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">No hay controles que coincidan con los filtros.</td></tr>';
+  }
+
+  // ---------- Vista: Realizados ----------
+  function viewRealizados() {
+    const lista = misControles().filter((c) => c.estado === 'Realizado').sort((a, b) => b.realizadoAt - a.realizadoAt);
+    const mes = lista.filter((c) => c.realizadoAt.getMonth() === HOY.getMonth() && c.realizadoAt.getFullYear() === HOY.getFullYear()).length;
+    const prom = promedio(lista.map((c) => promedioDe(c)).filter((x) => x !== null));
+    const crit = lista.reduce((a, c) => a + criticosDe(c).length, 0);
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile good"><b>${lista.length}</b><small>controles realizados</small></div>
+        <div class="tile"><b>${mes}</b><small>este mes</small></div>
+        <div class="tile accent"><b>${fmtProm(prom)}</b><small>puntaje promedio (de 5)</small></div>
+        <div class="tile crit"><b>${crit}</b><small>ítems críticos (puntaje 1-2)</small></div>
+        <div class="tile warn"><b>${lista.filter((c) => c.geo && c.geo.estado !== 'ok').length}</b><small>con excepción de ubicación</small></div>
+        <div class="tile"><b>${misCasos().length}</b><small>casos generados</small></div>
+      </div>
+      <h2>Historial de controles</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Servicio</th><th>Realizado el</th><th>Completó</th><th>Ubicación</th><th>Puntaje promedio</th><th>Ítems críticos</th><th>Fotos</th><th>Casos</th><th></th></tr></thead>
+        <tbody>${lista.map((c) => `
+          <tr class="clickable" data-act="abrir-control" data-id="${c.id}">
+            <td class="code">${c.id}</td>
+            <td><b>${esc(CLIENTE[c.cliente].nombre)}</b><div class="muted">${esc(CLIENTE[c.cliente].localidad)} · ${c.frecuencia.toLowerCase()}</div></td>
+            <td class="num">${fmtFechaHora(c.realizadoAt)}</td>
+            <td>${esc(c.completoNombre)}<div class="muted">${c.completoPor}</div></td>
+            <td>${geoPill(c)}</td>
+            <td>${promPill(promedioDe(c))}</td>
+            <td class="num">${criticosDe(c).length}</td>
+            <td class="num">${c.photos.length}</td>
+            <td class="num">${c.casosIds.length}</td>
+            <td><button class="small" data-act="abrir-control" data-id="${c.id}">Ver formulario</button></td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+
+  // ---------- Vista: Casos generados ----------
+  function viewCasos() {
+    const lista = misCasos().sort((a, b) => b.fecha - a.fecha);
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile accent"><b>${lista.length}</b><small>casos derivados</small></div>
+        <div class="tile crit"><b>${lista.filter((c) => c.tipo === 'No conformidad').length}</b><small>no conformidades</small></div>
+        <div class="tile warn"><b>${lista.filter((c) => c.tipo === 'Observación').length}</b><small>observaciones</small></div>
+        <div class="tile good"><b>${lista.filter((c) => c.tipo === 'Oportunidad de Mejora').length}</b><small>oportunidades de mejora</small></div>
+      </div>
+      <h2>Casos generados desde controles</h2>
+      ${lista.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Servicio</th><th>Tipo</th><th>Afectación</th><th>Derivado a</th><th>Control de origen</th><th>Estado</th></tr></thead>
+        <tbody>${lista.map((c) => `
+          <tr>
+            <td class="code">${c.id}</td>
+            <td class="num">${fmtFecha(c.fecha)}</td>
+            <td><b>${esc(CLIENTE[c.cliente].nombre)}</b><div class="muted" style="max-width:340px">${esc(c.descripcion.length > 110 ? c.descripcion.slice(0, 110) + '…' : c.descripcion)}</div></td>
+            <td><span class="badge tipo-badge ${tipoBadgeCls(c.tipo)}">${esc(c.tipo)}</span></td>
+            <td>${esc(c.afectacion)}</td>
+            <td>${esc(c.derivadoA)}</td>
+            <td><a href="#" data-act="abrir-control" data-id="${c.controlId}">${c.controlId}</a></td>
+            <td><span class="badge"><i class="chip accent"></i>${c.estado}</span></td>
+          </tr>`).join('')}</tbody>
+      </table></div>` : '<p class="empty">Todavía no generaste casos desde tus controles.</p>'}
+      <p class="muted" style="margin-top:.6rem">Los casos se generan desde el formulario de un control y llegan a Administración central para su tratamiento.</p>`;
+  }
+
+  // ---------- Vista: Mis clientes ----------
+  function viewClientes() {
+    app.innerHTML = `
+      <h2 style="margin-top:1.4rem">Servicios a mi cargo</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Servicio</th><th>Ubicación</th><th>Contacto</th><th>Horario</th><th>Personal</th><th>Hs/mes</th><th>Frecuencia</th><th>Próximo vencimiento</th><th>Último puntaje</th></tr></thead>
+        <tbody>${misClientes().map((cl) => {
+          const pend = controles.filter((c) => c.cliente === cl.key && c.estado !== 'Realizado').sort((a, b) => a.plazo - b.plazo)[0];
+          const ult = ultimoRealizado(cl.key);
+          return `<tr>
+            <td><b>${esc(cl.nombre)}</b><div class="muted">${esc(cl.empresa)}</div></td>
+            <td>${esc(cl.localidad)}<div class="muted">${esc(cl.provincia)} · ${esc(cl.domicilio)}</div><button type="button" class="small" style="margin-top:.35rem" data-act="ver-mapa" data-cl="${cl.key}">Ver mapa</button></td>
+            <td>${esc(cl.contacto)}<div class="muted">${esc(cl.tel)}</div><div class="muted">${esc(cl.mail)}</div></td>
+            <td>${esc(cl.horario)}</td>
+            <td class="num">${cl.personal}</td>
+            <td class="num">${cl.hs}</td>
+            <td>${pend ? pend.frecuencia : '—'}</td>
+            <td class="num">${pend ? fmtFecha(pend.plazo) + `<div>${plazoChip(pend)}</div>` : '—'}</td>
+            <td>${ult ? promPill(promedioDe(ult)) : '<span class="muted">—</span>'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  }
+
+  // ---------- Administración central ----------
+  const tieneExcepcion = (c) => c.estado === 'Realizado' && !!c.geo && (c.geo.estado !== 'ok' || (!!c.geoFin && c.geoFin.estado !== 'ok'));
+  const revisionDe = (c) => (c.revision && c.revision.estado) || 'Pendiente';
+  const REV_OPC = [['Pendiente', 'Pendiente de revisión'], ['Aprobada', 'Aprobada'], ['Aclaración', 'Pedir aclaración']];
+  const REV_CLS = { Pendiente: 'is-pend', Aprobada: 'is-ok', Aclaración: 'is-acl' };
+  const CASO_ESTADOS = ['Derivado', 'En tratamiento', 'Finalizado'];
+  const CASO_ESTADO_CLS = { Derivado: 'is-pend', 'En tratamiento': 'is-acl', Finalizado: 'is-ok' };
+  const clsProm = (p) => (p >= 4 ? 'good' : p >= 3 ? 'warn' : 'crit');
+  const barRows = (rows, max, fmt) => `<div class="bar-rank">${rows.map((r) => `
+    <div class="bar-rank-row"><span class="bar-rank-label" title="${esc(r.label)}">${esc(r.label)}</span>
+      <span class="bar-rank-track"><span class="bar-rank-fill ${r.cls || ''}" style="width:${max ? Math.min(100, (r.value / max) * 100) : 0}%"></span></span>
+      <span class="bar-rank-value">${fmt(r.value)}</span></div>`).join('')}</div>`;
+
+  function viewPanel() {
+    const real = controles.filter((c) => c.estado === 'Realizado');
+    const real30 = real.filter((c) => diasHasta(c.realizadoAt) >= -30);
+    const pend = controles.filter((c) => c.estado !== 'Realizado');
+    const venc = pend.filter((c) => diasHasta(c.plazo) < 0).sort((a, b) => a.plazo - b.plazo);
+    const excPend = real.filter((c) => tieneExcepcion(c) && revisionDe(c) === 'Pendiente');
+    const casosNuevos = casosGenerados.filter((x) => x.estado === 'Derivado');
+    const abiertos = casosGenerados.filter((x) => x.estado !== 'Finalizado').length;
+    const prom = promedio(real30.map((c) => promedioDe(c)).filter((x) => x !== null));
+    const porSup = Object.values(SUPS).map((s) => {
+      const p = promedio(real.filter((c) => supDe(c).key === s.key).map((c) => promedioDe(c)).filter((x) => x !== null));
+      return { label: s.nombre, value: p === null ? 0 : p, cls: p === null ? '' : clsProm(p) };
+    });
+    const porSec = SECCIONES.map((s) => {
+      const p = promedio(real.map((c) => promedioDe(c, s.id)).filter((x) => x !== null));
+      return { label: s.titulo, value: p === null ? 0 : p, cls: p === null ? '' : clsProm(p) };
+    });
+    const alertas = [
+      ...venc.map((c) => ({ pill: `<span class="pill crit">Vencido hace ${-diasHasta(c.plazo)} d</span>`, t: CLIENTE[c.cliente].nombre, s: `${supDe(c).nombre} · control ${c.frecuencia.toLowerCase()}`, go: 'acontroles', estado: 'vencidos' })),
+      ...excPend.map((c) => ({ pill: '<span class="pill warn">Excepción de ubicación</span>', t: CLIENTE[c.cliente].nombre, s: `${supDe(c).nombre} · a ${c.geo.dist} m del servicio · ${fmtFecha(c.realizadoAt)}`, go: 'excepciones' })),
+      ...casosNuevos.map((x) => ({ pill: '<span class="pill mute">Caso nuevo</span>', t: `${x.id} · ${x.tipo}`, s: `${CLIENTE[x.cliente].nombre} · ${x.derivadoA.split(' — ')[0]}`, go: 'acasos' })),
+    ];
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile good"><b>${real30.length}</b><small>controles realizados (últimos 30 d)</small></div>
+        <div class="tile crit"><b>${venc.length}</b><small>controles vencidos</small></div>
+        <div class="tile accent"><b>${fmtProm(prom)}</b><small>puntaje promedio (de 5)</small></div>
+        <div class="tile warn"><b>${excPend.length}</b><small>excepciones de ubicación sin revisar</small></div>
+        <div class="tile"><b>${abiertos}</b><small>casos abiertos recibidos</small></div>
+      </div>
+      <div class="dash-grid">
+        <div class="card"><h3>Puntaje promedio por supervisor</h3>${barRows(porSup, 5, fmtProm)}<p class="muted" style="margin:.7rem 0 0">Sobre todos los controles realizados. Escala de 1 a 5.</p></div>
+        <div class="card"><h3>Puntaje promedio por sección del formulario</h3>${barRows(porSec, 5, fmtProm)}<p class="muted" style="margin:.7rem 0 0">Las secciones más bajas son las que más acciones correctivas piden.</p></div>
+        <div class="card" style="grid-column: 1 / -1"><h3>Para atender</h3>
+          ${alertas.length ? `<div class="alert-list">${alertas.map((a) => `<div class="alert-item" data-act="goto" data-view="${a.go}" ${a.estado ? `data-estado="${a.estado}"` : ''}>${a.pill}<div class="grow">${esc(a.t)}<div class="sub">${esc(a.s)}</div></div><span class="muted">Ver →</span></div>`).join('')}</div>` : '<p class="empty">No hay nada pendiente de atender.</p>'}
+        </div>
+      </div>`;
+  }
+
+  function viewAControles() {
+    const f = state.aFiltros;
+    app.innerHTML = `
+      <div class="page-head">
+        <h2 style="margin:0">Controles de todos los supervisores</h2>
+        <button type="button" class="primary" data-act="generar-control">+ Generar control</button>
+      </div>
+      <div class="filters">
+        <input type="search" id="a-q" placeholder="Buscar por servicio, ID, localidad…" value="${esc(f.q)}">
+        <select id="a-estado">${[['todos', 'Todos los estados'], ['vencidos', 'Vencidos'], ['Pendiente', 'Pendientes'], ['En curso', 'En curso'], ['Realizado', 'Realizados']].map(([v, l]) => `<option value="${v}" ${f.estado === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <select id="a-sup"><option value="">Todos los supervisores</option>${Object.values(SUPS).map((s) => `<option value="${s.key}" ${f.sup === s.key ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select>
+        <span class="count-note" id="a-count"></span>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Supervisor</th><th>Servicio</th><th>Frecuencia</th><th>Plazo / realizado</th><th>Estado</th><th>Reasignación</th><th>Ubicación</th><th>Puntaje</th><th></th></tr></thead>
+        <tbody id="a-body"></tbody>
+      </table></div>
+      <p class="muted" style="margin-top:.6rem">Click en una fila para ver lo que cargó el supervisor, incluso en los controles todavía en curso. Siempre en solo lectura.</p>`;
+    $('#a-q').addEventListener('input', (e) => { f.q = e.target.value; renderAControlesBody(); });
+    $('#a-estado').addEventListener('change', (e) => { f.estado = e.target.value; renderAControlesBody(); });
+    $('#a-sup').addEventListener('change', (e) => { f.sup = e.target.value; renderAControlesBody(); });
+    renderAControlesBody();
+  }
+
+  function renderAControlesBody() {
+    const f = state.aFiltros; const q = f.q.trim().toLowerCase();
+    let lista = controles.slice();
+    if (q) lista = lista.filter((c) => { const cl = CLIENTE[c.cliente]; return `${c.id} ${cl.nombre} ${cl.localidad} ${cl.provincia}`.toLowerCase().includes(q); });
+    if (f.sup) lista = lista.filter((c) => supDe(c).key === f.sup);
+    if (f.estado === 'vencidos') lista = lista.filter((c) => c.estado !== 'Realizado' && diasHasta(c.plazo) < 0);
+    else if (f.estado !== 'todos') lista = lista.filter((c) => c.estado === f.estado);
+    lista.sort((a, b) => (a.estado === 'Realizado') - (b.estado === 'Realizado') || (a.estado === 'Realizado' ? b.realizadoAt - a.realizadoAt : a.plazo - b.plazo));
+    $('#a-count').textContent = `${lista.length} de ${controles.length}`;
+    $('#a-body').innerHTML = lista.length ? lista.map((c) => {
+      const cl = CLIENTE[c.cliente]; const ro = c.estado === 'Realizado';
+      const parcial = !ro && promedioDe(c) !== null;
+      const cargado = ro || evaluados(c) || c.photos.length || c.geo;
+      return `<tr class="clickable" data-act="abrir-control" data-id="${c.id}">
+        <td class="code">${c.id}</td>
+        <td>${esc(supDe(c).nombre)}<div class="muted">${esc(supDe(c).zona)}</div>${c.sup && c.reasig ? `<div><span class="pill warn" title="${esc(c.reasig.motivo)}">Reasignado desde ${esc(SUPS[c.reasig.de].nombre)}</span></div>` : ''}</td>
+        <td><b>${esc(cl.nombre)}</b><div class="muted">${esc(cl.localidad)}, ${esc(cl.provincia)}</div></td>
+        <td>${c.frecuencia}</td>
+        <td class="num">${ro ? fmtFechaHora(c.realizadoAt) : fmtFecha(c.plazo) + `<div>${plazoChip(c)}</div>`}</td>
+        <td>${estadoBadge(c)}</td>
+        <td>${ro ? '<span class="muted" title="Un control realizado no se puede reasignar">—</span>' : `<button type="button" class="small" data-act="reasignar-menu" data-id="${c.id}" aria-haspopup="menu">Reasignar ▾</button>`}</td>
+        <td>${c.geo ? geoPill(c) : '<span class="muted">—</span>'}</td>
+        <td>${promedioDe(c) !== null ? promPill(promedioDe(c)) + (parcial ? '<div class="muted">parcial</div>' : '') : '<span class="muted">—</span>'}</td>
+        <td><button class="small" data-act="abrir-control" data-id="${c.id}">${ro ? 'Ver formulario' : cargado ? 'Ver avance' : 'Ver formulario'}</button></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="10" class="empty">No hay controles que coincidan con los filtros.</td></tr>';
+  }
+
+  // ----- Reasignar un control a otro supervisor -----
+  let popAbierto = null;
+  function cerrarPop() { if (popAbierto) { popAbierto.remove(); popAbierto = null; } }
+  document.addEventListener('click', (e) => { if (popAbierto && !popAbierto.contains(e.target) && !e.target.closest('[data-act="reasignar-menu"]')) cerrarPop(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarPop(); });
+  window.addEventListener('scroll', cerrarPop, true);
+
+  function abrirMenuReasignar(btn, id) {
+    const abierto = popAbierto && popAbierto.dataset.id === id;
+    cerrarPop(); if (abierto) return;
+    const c = byId(id); const actual = supDe(c).key;
+    const pop = document.createElement('div');
+    pop.className = 'pop'; pop.dataset.id = id; pop.setAttribute('role', 'menu');
+    pop.innerHTML = `<div class="pop-title">Reasignar ${c.id} a…</div>` + Object.values(SUPS).filter((s) => s.key !== actual).map((s) =>
+      `<button type="button" role="menuitem" data-sup="${s.key}"><b>${esc(s.nombre)}</b><span class="muted">${esc(s.zona)}${s.key === CLIENTE[c.cliente].sup ? ' · supervisor habitual del servicio' : ''}</span></button>`).join('');
+    document.body.appendChild(pop); popAbierto = pop;
+    const r = btn.getBoundingClientRect();
+    pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
+    pop.style.top = `${r.bottom + pop.offsetHeight + 8 > window.innerHeight ? Math.max(8, r.top - pop.offsetHeight - 4) : r.bottom + 4}px`;
+    pop.addEventListener('click', (e) => { const b = e.target.closest('button[data-sup]'); if (b) { cerrarPop(); abrirReasignarModal(id, b.dataset.sup); } });
+  }
+
+  const MOTIVOS_REASIG = ['Supervisor no disponible', 'Licencia o vacaciones', 'Capacitación', 'Reasignación de zona', 'Otro'];
+  function abrirReasignarModal(id, nuevaKey) {
+    const c = byId(id); const de = supDe(c); const a = SUPS[nuevaKey]; const cl = CLIENTE[c.cliente];
+    const back = document.createElement('div');
+    back.className = 'confirm-backdrop';
+    back.innerHTML = `
+      <div class="confirm-box" role="dialog" aria-modal="true" aria-label="Reasignar control">
+        <h3>Reasignar el control ${c.id}</h3>
+        <p class="muted" style="margin:0">${esc(cl.nombre)} · ${esc(cl.localidad)} · plazo ${fmtFecha(c.plazo)}</p>
+        <div class="reasig-flow"><div><span class="muted">Supervisor actual</span><b>${esc(de.nombre)}</b><span class="muted">${esc(de.zona)}</span></div><span class="arrow">→</span><div><span class="muted">Nuevo supervisor</span><b>${esc(a.nombre)}</b><span class="muted">${esc(a.zona)}</span></div></div>
+        <form class="modal-form" id="reasig-form">
+          <div><label class="field-label" for="rs-motivo">Motivo</label><select id="rs-motivo">${MOTIVOS_REASIG.map((m) => `<option>${m}</option>`).join('')}</select></div>
+          <div><label class="field-label" for="rs-detalle">Detalle (opcional)</label><textarea id="rs-detalle" rows="3" placeholder="Ej.: el supervisor estará de licencia hasta el fin de mes"></textarea></div>
+          <p class="muted" style="margin:0">El control pasa a la lista de ${esc(a.nombre)}, con el mismo plazo. Si ya tenía datos cargados en borrador, se conservan. El próximo control del servicio vuelve a su supervisor habitual.</p>
+          <div class="row"><button type="button" id="rs-cancel">Cancelar</button><button type="submit" class="primary">Reasignar control</button></div>
+        </form>
+      </div>`;
+    document.body.appendChild(back);
+    const cerrar = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    document.addEventListener('keydown', onKey);
+    back.addEventListener('click', (e) => { if (e.target === back) cerrar(); });
+    $('#rs-cancel', back).addEventListener('click', cerrar);
+    $('#reasig-form', back).addEventListener('submit', (e) => {
+      e.preventDefault();
+      c.reasig = { de: de.key, a: nuevaKey, motivo: $('#rs-motivo', back).value, detalle: $('#rs-detalle', back).value.trim(), at: new Date() };
+      c.sup = nuevaKey === CLIENTE[c.cliente].sup ? null : nuevaKey;   // volver al supervisor habitual limpia la reasignación
+      if (!c.sup) c.reasig = null;
+      if (c.completoPor === 'Supervisor') c.completoNombre = a.nombre;
+      cerrar();
+      toast(`${c.id} reasignado a ${a.nombre}${c.sup ? ' · motivo: ' + c.reasig.motivo.toLowerCase() : ''}`);
+      renderAControlesBody();
+    });
+  }
+
+  // ----- Generar un control nuevo -----
+  function abrirGenerarControl() {
+    const back = document.createElement('div');
+    back.className = 'confirm-backdrop';
+    const hoy = inputFecha(HOY);
+    back.innerHTML = `
+      <div class="confirm-box" role="dialog" aria-modal="true" aria-label="Generar control">
+        <h3>Generar control</h3>
+        <p class="muted" style="margin:0">Mismos datos que un control ya generado. Queda pendiente de realizar por el supervisor asignado.</p>
+        <form class="modal-form" id="gen-form">
+          <div class="two">
+            <div><label class="field-label">ID</label><input type="text" value="Se asigna al guardar" disabled></div>
+            <div><label class="field-label">Estado</label><input type="text" value="Pendiente" disabled></div>
+          </div>
+          <div><label class="field-label" for="gc-cliente">Servicio / cliente</label>
+            <select id="gc-cliente"><option value="">Elegí un servicio…</option>${CLIENTES.map((c) => `<option value="${c.key}">${esc(c.nombre)} — ${esc(c.localidad)}</option>`).join('')}</select></div>
+          <div class="two">
+            <div><label class="field-label" for="gc-sup">Supervisor asignado</label>
+              <select id="gc-sup">${Object.values(SUPS).map((s) => `<option value="${s.key}">${esc(s.nombre)} — ${esc(s.zona)}</option>`).join('')}</select></div>
+            <div><label class="field-label" for="gc-frec">Frecuencia</label>
+              <select id="gc-frec">${Object.keys(FRECUENCIA_DIAS).map((f) => `<option>${f}</option>`).join('')}</select></div>
+          </div>
+          <div class="two">
+            <div><label class="field-label">Último control</label><input type="text" id="gc-ultimo" value="—" disabled></div>
+            <div><label class="field-label" for="gc-plazo">Plazo para realizarlo</label><input type="date" id="gc-plazo" min="${hoy}" value="${hoy}"></div>
+          </div>
+          <p class="muted" id="gc-aviso" style="margin:0" hidden></p>
+          <p class="muted" id="gc-err" style="color:var(--status-crit);margin:0" hidden></p>
+          <div class="row"><button type="button" id="gc-cancel">Cancelar</button><button type="submit" class="primary">Generar control</button></div>
+        </form>
+      </div>`;
+    document.body.appendChild(back);
+    const cerrar = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    document.addEventListener('keydown', onKey);
+    back.addEventListener('click', (e) => { if (e.target === back) cerrar(); });
+    $('#gc-cancel', back).addEventListener('click', cerrar);
+
+    const alCambiarServicio = () => {
+      const key = $('#gc-cliente', back).value; if (!key) return;
+      $('#gc-sup', back).value = CLIENTE[key].sup;
+      const ult = ultimoRealizado(key);
+      const pend = controles.filter((c) => c.cliente === key && c.estado !== 'Realizado').sort((a, b) => a.plazo - b.plazo)[0];
+      const frec = (pend || ult || {}).frecuencia; if (frec) $('#gc-frec', back).value = frec;
+      $('#gc-ultimo', back).value = ult ? fmtFecha(ult.realizadoAt) : '—';
+      const sugerido = ult ? addDays(ult.realizadoAt, FRECUENCIA_DIAS[$('#gc-frec', back).value]) : HOY;
+      $('#gc-plazo', back).value = inputFecha(sugerido < HOY ? HOY : sugerido);
+      const av = $('#gc-aviso', back);
+      av.hidden = !pend;
+      if (pend) av.textContent = `Ojo: este servicio ya tiene un control pendiente (${pend.id}, plazo ${fmtFecha(pend.plazo)}). Si generás otro, van a quedar los dos.`;
+    };
+    $('#gc-cliente', back).addEventListener('change', alCambiarServicio);
+
+    $('#gen-form', back).addEventListener('submit', (e) => {
+      e.preventDefault();
+      const key = $('#gc-cliente', back).value; const plazoStr = $('#gc-plazo', back).value;
+      const er = $('#gc-err', back); er.hidden = true;
+      if (!key) { er.textContent = 'Elegí el servicio al que corresponde el control.'; er.hidden = false; return; }
+      if (!plazoStr || plazoStr < inputFecha(HOY)) { er.textContent = 'El plazo tiene que ser hoy o una fecha futura.'; er.hidden = false; return; }
+      const [y, m, d] = plazoStr.split('-').map(Number);
+      const ult = ultimoRealizado(key);
+      const c = nuevoControl(key, $('#gc-frec', back).value, ult ? ult.realizadoAt : null, new Date(y, m - 1, d));
+      const supKey = $('#gc-sup', back).value;
+      if (supKey !== CLIENTE[key].sup) { c.sup = supKey; c.completoNombre = SUPS[supKey].nombre; }
+      controles.push(c);
+      cerrar();
+      state.aFiltros.estado = state.aFiltros.estado === 'Realizado' ? 'todos' : state.aFiltros.estado;
+      viewAControles();
+      toast(`Control ${c.id} generado y asignado a ${SUPS[supKey].nombre}`);
+    });
+  }
+
+  function viewExcepciones() {
+    const lista = controles.filter(tieneExcepcion).sort((a, b) => b.realizadoAt - a.realizadoAt);
+    const n = (est) => lista.filter((c) => revisionDe(c) === est).length;
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile warn"><b>${n('Pendiente')}</b><small>sin revisar</small></div>
+        <div class="tile accent"><b>${n('Aclaración')}</b><small>con aclaración pedida</small></div>
+        <div class="tile good"><b>${n('Aprobada')}</b><small>aprobadas</small></div>
+        <div class="tile"><b>${lista.length}</b><small>excepciones en total</small></div>
+      </div>
+      <h2>Controles sin ubicación verificada</h2>
+      <p class="muted" style="margin:-.3rem 0 .8rem">Controles donde el supervisor estuvo fuera del radio de ${GEO_RADIO} m en el check-in o al finalizar. Revisá el motivo y marcá la decisión.</p>
+      ${lista.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Control</th><th>Supervisor</th><th>Servicio</th><th>Ubicación</th><th>Motivo informado</th><th>Revisión</th><th></th></tr></thead>
+        <tbody>${lista.map((c) => `
+          <tr>
+            <td class="code">${c.id}<div class="muted">${fmtFecha(c.realizadoAt)}</div></td>
+            <td>${esc(supDe(c).nombre)}</td>
+            <td><b>${esc(CLIENTE[c.cliente].nombre)}</b><div class="muted">${esc(CLIENTE[c.cliente].localidad)}</div></td>
+            <td><div>${c.geo.estado === 'ok' ? '<span class="pill good">Check-in verificado</span>' : `<span class="pill warn">Check-in a ${c.geo.dist} m</span>`}</div>
+                ${c.geoFin ? `<div>${c.geoFin.estado === 'ok' ? '<span class="pill good">Cierre verificado</span>' : `<span class="pill warn">Cierre a ${c.geoFin.dist} m</span>`}</div>` : ''}</td>
+            <td class="motivo">${c.geoMotivo ? esc(c.geoMotivo) : '<span class="muted">Sin motivo informado</span>'}</td>
+            <td><select class="inline ${REV_CLS[revisionDe(c)]}" data-in="revision" data-id="${c.id}" aria-label="Revisión de ${c.id}">${REV_OPC.map(([v, l]) => `<option value="${v}" ${revisionDe(c) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+            <td><div class="btn-col"><button class="small" data-act="ver-mapa-geo" data-id="${c.id}">Ver en mapa</button><button class="small" data-act="abrir-control" data-id="${c.id}">Ver formulario</button></div></td>
+          </tr>`).join('')}</tbody>
+      </table></div>` : '<p class="empty">No hay excepciones de ubicación.</p>'}`;
+  }
+
+  function viewACasos() {
+    const lista = [...casosGenerados].sort((a, b) => b.fecha - a.fecha);
+    const n = (est) => lista.filter((x) => x.estado === est).length;
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile warn"><b>${n('Derivado')}</b><small>nuevos, sin tratar</small></div>
+        <div class="tile accent"><b>${n('En tratamiento')}</b><small>en tratamiento</small></div>
+        <div class="tile good"><b>${n('Finalizado')}</b><small>finalizados</small></div>
+        <div class="tile"><b>${lista.length}</b><small>casos recibidos</small></div>
+      </div>
+      <h2>Casos derivados desde los controles</h2>
+      ${lista.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Fecha</th><th>Supervisor</th><th>Servicio</th><th>Tipo</th><th>Afectación</th><th>Derivado a</th><th>Control</th><th>Estado</th></tr></thead>
+        <tbody>${lista.map((x) => `
+          <tr>
+            <td class="code">${x.id}</td>
+            <td class="num">${fmtFecha(x.fecha)}</td>
+            <td>${esc(supDeCaso(x).nombre)}</td>
+            <td><b>${esc(CLIENTE[x.cliente].nombre)}</b><div class="muted" style="max-width:300px">${esc(x.descripcion.length > 100 ? x.descripcion.slice(0, 100) + '…' : x.descripcion)}</div></td>
+            <td><span class="badge tipo-badge ${tipoBadgeCls(x.tipo)}">${esc(x.tipo)}</span></td>
+            <td>${esc(x.afectacion)}</td>
+            <td>${esc(x.derivadoA)}</td>
+            <td><a href="#" data-act="abrir-control" data-id="${x.controlId}">${x.controlId}</a></td>
+            <td><select class="inline ${CASO_ESTADO_CLS[x.estado]}" data-in="casoEstado" data-id="${x.id}" aria-label="Estado de ${x.id}">${CASO_ESTADOS.map((e) => `<option ${x.estado === e ? 'selected' : ''}>${e}</option>`).join('')}</select></td>
+          </tr>`).join('')}</tbody>
+      </table></div>` : '<p class="empty">Todavía no llegaron casos desde los controles.</p>'}
+      <p class="muted" style="margin-top:.6rem">En la maqueta el estado se cambia desde acá. En el sistema real, estos casos entran a la lista de Casos del Tablero Operativo.</p>`;
+  }
+
+  function viewSupervisores() {
+    const filas = Object.values(SUPS).map((s) => {
+      const cls = CLIENTES.filter((c) => c.sup === s.key);
+      const cs = controles.filter((c) => supDe(c).key === s.key);
+      const pend = cs.filter((c) => c.estado !== 'Realizado');
+      const real = cs.filter((c) => c.estado === 'Realizado');
+      return {
+        s, servicios: cls.length, pend: pend.length, venc: pend.filter((c) => diasHasta(c.plazo) < 0).length,
+        r30: real.filter((c) => diasHasta(c.realizadoAt) >= -30).length, prom: promedio(real.map((c) => promedioDe(c)).filter((x) => x !== null)),
+        crit: real.reduce((a, c) => a + criticosDe(c).length, 0), exc: real.filter(tieneExcepcion).length,
+        casos: casosGenerados.filter((x) => supDeCaso(x).key === s.key).length,
+      };
+    });
+    app.innerHTML = `
+      <div class="tiles">
+        <div class="tile accent"><b>${filas.length}</b><small>supervisores</small></div>
+        <div class="tile"><b>${CLIENTES.length}</b><small>servicios con control</small></div>
+        <div class="tile"><b>${filas.reduce((a, f) => a + f.pend, 0)}</b><small>controles pendientes</small></div>
+        <div class="tile crit"><b>${filas.reduce((a, f) => a + f.venc, 0)}</b><small>vencidos</small></div>
+      </div>
+      <h2>Seguimiento por supervisor</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Supervisor</th><th>Zona</th><th>Servicios</th><th>Pendientes</th><th>Vencidos</th><th>Realizados (30 d)</th><th>Puntaje</th><th>Ítems críticos</th><th>Excepciones</th><th>Casos</th><th></th></tr></thead>
+        <tbody>${filas.map((f) => `
+          <tr>
+            <td><b>${esc(f.s.nombre)}</b><div class="muted">${esc(f.s.legajo)} · ${esc(f.s.tel)}</div></td>
+            <td>${esc(f.s.zona)}</td>
+            <td class="num">${f.servicios}</td><td class="num">${f.pend}</td>
+            <td class="num">${f.venc ? `<span class="pill crit">${f.venc}</span>` : '0'}</td>
+            <td class="num">${f.r30}</td><td>${promPill(f.prom)}</td><td class="num">${f.crit}</td>
+            <td class="num">${f.exc ? `<span class="pill warn">${f.exc}</span>` : '0'}</td><td class="num">${f.casos}</td>
+            <td><button class="small" data-act="goto" data-view="acontroles" data-sup="${f.s.key}">Ver controles</button></td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+
+  // ---------- Formulario de control ----------
+  function hintHtml(v, itemId) {
+    if (!esNum(v) || v > 3) return '';
+    const crit = v <= 2;
+    return `<div class="item-hint ${crit ? 'crit' : 'warn'}"><span><b>${crit ? 'Atención:' : 'Tené en cuenta:'}</b> ${crit ? HINT_CRIT : HINT_WARN}</span>${state.rol === 'sup' ? `<button type="button" class="small outline" data-act="abrir-caso" data-i="${itemId}">Generar caso desde este ítem</button>` : ''}</div>`;
+  }
+  const lvlCls = (v) => (esNum(v) ? (v <= 2 ? 'lvl-crit' : v === 3 ? 'lvl-warn' : '') : '');
+
+  function openPlanilla(id) {
+    const c = byId(id);
+    if (!c) return;
+    state.controlId = id;
+    const ro = soloLectura(c);
+    const cl = CLIENTE[c.cliente];
+    if (!ro && !c.visitaFecha) c.visitaFecha = inputFecha(new Date());
+    const dis = ro ? 'disabled' : '';
+
+    const itemHtml = (it) => {
+      const v = c.answers[it.id];
+      return `<div class="item-row ${lvlCls(v)}" data-item="${it.id}">
+        <div class="item-head">
+          <div class="item-name">${esc(it.texto)}</div>
+          <div class="scores">
+            ${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="sc ${v === n ? 'selected' : ''}" data-act="score" data-i="${it.id}" data-v="${n}" aria-label="${esc(it.texto)}: ${n}" ${dis}>${n}</button>`).join('')}
+            <button type="button" class="sc na ${v === 'na' ? 'selected' : ''}" data-act="score" data-i="${it.id}" data-v="na" ${dis}>N/A</button>
+          </div>
+        </div>
+        <div data-hint="${it.id}">${hintHtml(v, it.id)}</div>
+      </div>`;
+    };
+
+    const secHtml = (s) => `
+      <div class="card" data-sec="${s.id}">
+        <div class="sec-head"><h2>${esc(s.titulo)}</h2><span class="muted" data-secavg="${s.id}"></span></div>
+        <p class="sec-question">${esc(s.pregunta)}</p>
+        ${s.items.map(itemHtml).join('')}
+        <div class="sec-comments">
+          <label class="field-label">${esc(s.comentario)}</label>
+          <textarea data-in="coment" data-sec="${s.id}" placeholder="Comentarios (opcional)" ${dis}>${esc(c.comentarios[s.id] || '')}</textarea>
+          ${ro ? '' : `<div class="row">
+            <button type="button" class="small" data-act="foto-cam" data-sec="${s.id}">Sacar foto</button>
+            <button type="button" class="small" data-act="foto-gal" data-sec="${s.id}">Cargar foto</button>
+            <input type="file" accept="image/*" capture="environment" hidden data-file="1" data-sec="${s.id}" data-kind="cam">
+            <input type="file" accept="image/*" multiple hidden data-file="1" data-sec="${s.id}" data-kind="gal">
+          </div>`}
+          <div data-fotos="${s.id}"></div>
+        </div>
+      </div>`;
+
+    app.innerHTML = `
+      <p style="margin-top:1.2rem"><a class="back-link" data-act="volver">← Volver a ${VISTA_LABEL[state.origen] || 'Mis controles'}</a></p>
+      <div class="card">
+        <div class="row" style="margin-top:0;justify-content:space-between">
+          <div><span class="code">${c.id}</span><h2 style="margin:.1rem 0 0">Formulario de control de supervisión</h2></div>
+          <div class="row" style="margin:0">${estadoBadge(c)}${plazoChip(c)}</div>
+        </div>
+        <h3 style="margin-top:1rem">Identificación del servicio</h3>
+        <dl class="meta-grid" style="margin-top:.4rem">
+          <div><dt>Servicio / cliente</dt><dd><b>${esc(cl.nombre)}</b><br>${esc(cl.empresa)}</dd></div>
+          <div><dt>Ubicación</dt><dd>${esc(cl.localidad)}, ${esc(cl.provincia)}<br>${esc(cl.domicilio)}</dd></div>
+          <div><dt>Contacto del cliente</dt><dd>${esc(cl.contacto)}<br>${esc(cl.tel)} · ${esc(cl.mail)}</dd></div>
+          <div><dt>Horario del servicio</dt><dd>${esc(cl.horario)}</dd></div>
+          <div><dt>Personal asignado · Hs/mes</dt><dd>${cl.personal} personas · ${cl.hs} hs</dd></div>
+          <div><dt>Frecuencia</dt><dd>${c.frecuencia} · último control ${fmtFecha(c.ultimo)}</dd></div>
+          <div><dt>${c.estado === 'Realizado' ? 'Realizado el' : 'Plazo para realizarlo'}</dt><dd>${c.estado === 'Realizado' ? fmtFechaHora(c.realizadoAt) : '<b>' + fmtFecha(c.plazo) + '</b>'}</dd></div>
+          <div><dt>Supervisor a cargo</dt><dd>${esc(supDe(c).nombre)} · ${esc(supDe(c).legajo)}${c.sup && c.reasig ? `<br><span class="muted">Reasignado desde ${esc(SUPS[c.reasig.de].nombre)} · ${esc(c.reasig.motivo.toLowerCase())}</span>` : ''}</dd></div>
+        </dl>
+        <div class="field-grid">
+          <div><label class="field-label">Completa el formulario</label>
+            <select data-in="completoPor" ${dis}><option ${c.completoPor === 'Supervisor' ? 'selected' : ''}>Supervisor</option><option ${c.completoPor === 'Encargado' ? 'selected' : ''}>Encargado</option></select></div>
+          <div><label class="field-label">Nombre y apellido</label><input type="text" data-in="completoNombre" value="${esc(c.completoNombre)}" ${dis}></div>
+          <div><label class="field-label">Fecha de la visita</label><input type="date" data-in="visitaFecha" value="${esc(c.visitaFecha)}" ${dis}></div>
+          <div><label class="field-label">Hora de ingreso</label><input type="time" data-in="ingreso" value="${esc(c.ingreso)}" ${dis}></div>
+          <div><label class="field-label">Hora de egreso</label><input type="time" data-in="egreso" value="${esc(c.egreso)}" ${dis}></div>
+        </div>
+      </div>
+
+      ${state.rol === 'admin' && c.estado !== 'Realizado' ? `<div class="alert-box info"><b>Vista de solo lectura.</b> ${evaluados(c) || c.photos.length || c.geo ? 'El supervisor todavía no finalizó este control: se muestra lo que cargó hasta ahora.' : 'El supervisor todavía no empezó este control: no hay nada cargado.'}</div>` : ''}
+      <div class="card" id="geo-card">
+        <div class="sec-head"><h3 style="margin:0">Ubicación del control</h3><span class="muted">Radio permitido ${GEO_RADIO} m · precisión máxima ${GEO_PREC} m</span></div>
+        <p class="intro" style="margin:.5rem 0 0">${state.rol === 'sup' ? 'Para dejar constancia de que el control se hace en el servicio, registrá tu ubicación al llegar. Se guarda con la hora del sistema y se vuelve a verificar al finalizar.' : 'Ubicación que registró el supervisor al llegar al servicio, con la hora del sistema, y la lectura de control al finalizar.'}</p>
+        ${ro ? '' : `<div class="row"><button type="button" class="primary" data-act="geo-checkin">${c.geo ? 'Volver a registrar ubicación' : 'Registrar ubicación (check-in)'}</button><button type="button" class="small" data-act="ver-mapa" data-cl="${c.cliente}">Ver mapa del servicio</button></div>`}
+        <div id="geo-result"></div>
+      </div>
+
+      <div class="card">
+        <details ${ro ? '' : 'open'}>
+          <summary style="cursor:pointer;font-weight:600">${state.rol === 'sup' ? 'Instrucciones y criterios de calificación' : 'Criterios de calificación'}</summary>
+          ${state.rol === 'sup' ? INTRO.map((t) => `<p class="intro" style="margin-top:.6rem">${esc(t)}</p>`).join('') : ''}
+          <div class="criteria">${CRITERIOS.map((k) => `<div class="crit-row"><b class="sc-badge sc-${k.n}">${k.n}</b><span><strong>${esc(k.titulo)}</strong>, ${esc(k.desc)}</span></div>`).join('')}</div>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="summary-grid">
+          <div><span class="muted">Ítems evaluados</span><br><b id="res-prog"></b><div class="progress"><span id="res-bar"></span></div></div>
+          <div><span class="muted">Puntaje promedio</span><br><b id="res-avg"></b><div class="sub" id="res-band"></div></div>
+          <div><span class="muted">Ítems críticos (1-2)</span><br><b id="res-crit"></b></div>
+          <div><span class="muted">Ítems con puntaje 3</span><br><b id="res-med"></b></div>
+        </div>
+      </div>
+
+      ${SECCIONES.map(secHtml).join('')}
+
+      <div class="card">
+        <h3>Casos generados desde este control</h3>
+        <div id="casos-control"></div>
+      </div>
+
+      <div id="faltantes"></div>
+      <div class="sticky-bar">
+        ${state.rol === 'sup' ? '<button type="button" class="outline" data-act="abrir-caso">Generar caso</button>' : ''}
+        <span class="spacer"></span>
+        ${ro ? `<span class="muted">${state.rol === 'sup' ? 'Control finalizado — solo lectura' : 'Vista de solo lectura · Administración central'}</span>` : '<button type="button" data-act="guardar">Guardar borrador</button><button type="button" class="primary" data-act="finalizar">Finalizar control</button>'}
+      </div>`;
+
+    SECCIONES.forEach((s) => renderFotos(s.id));
+    renderCasosControl(); updateResumen(); renderGeo();
+    window.scrollTo({ top: 0 });
+  }
+
+  function bandaDe(p, criticos) {
+    if (p === null) return '';
+    if (criticos) return `hay ${criticos} ítem${criticos > 1 ? 's' : ''} crítico${criticos > 1 ? 's' : ''}: el promedio no los refleja`;
+    const n = Math.min(5, Math.max(1, Math.round(p)));
+    return `equivale a ${n} · ${CRITERIOS.find((k) => k.n === n).titulo}`;
+  }
+
+  function updateResumen() {
+    const c = byId(state.controlId); if (!c) return;
+    const done = evaluados(c);
+    $('#res-prog').textContent = `${done} de ${ITEMS.length}`;
+    $('#res-bar').style.width = `${(done / ITEMS.length) * 100}%`;
+    const p = promedioDe(c);
+    $('#res-avg').textContent = p === null ? '—' : `${fmtProm(p)} / 5`;
+    $('#res-band').textContent = bandaDe(p, criticosDe(c).length);
+    $('#res-crit').textContent = criticosDe(c).length;
+    $('#res-med').textContent = mediosDe(c).length;
+    SECCIONES.forEach((s) => { const x = promedioDe(c, s.id); const el = $(`[data-secavg="${s.id}"]`); if (el) el.textContent = x === null ? '' : `Promedio de la sección: ${fmtProm(x)} / 5`; });
+  }
+
+  function renderFotos(secId) {
+    const c = byId(state.controlId); if (!c) return;
+    const ro = soloLectura(c);
+    const wrap = $(`[data-fotos="${secId}"]`);
+    const fotos = c.photos.map((p, i) => ({ p, i })).filter((x) => x.p.sec === secId);
+    wrap.innerHTML = fotos.length ? `<div class="photo-grid">${fotos.map(({ p, i }) => `
+      <div class="photo-card">
+        <button type="button" class="photo-open" data-act="ampliar-foto" data-i="${i}" aria-label="Ampliar foto de ${esc(SEC[secId].titulo)}"><img src="${p.url}" alt="Foto de ${esc(SEC[secId].titulo)}"></button>
+        <div class="pc-body">
+          <input type="text" data-in="fcap" data-i="${i}" placeholder="Descripción de la foto" value="${esc(p.caption)}" ${ro ? 'disabled' : ''}>
+          ${ro ? '' : `<button type="button" class="small" data-act="quitar-foto" data-i="${i}" data-sec="${secId}">Quitar</button>`}
+        </div>
+      </div>`).join('')}</div>` : '';
+  }
+
+  function renderCasosControl() {
+    const c = byId(state.controlId); if (!c) return;
+    const casos = casosGenerados.filter((x) => x.controlId === c.id);
+    $('#casos-control').innerHTML = casos.length ? casos.map((x) => `
+      <div class="case-line">
+        <span class="code">${x.id}</span>
+        <span class="badge tipo-badge ${tipoBadgeCls(x.tipo)}">${esc(x.tipo)}</span>
+        <span>${esc(x.afectacion)}</span>
+        <span class="muted">→ ${esc(x.derivadoA)}</span>
+        <span class="muted" style="margin-left:auto">${fmtFecha(x.fecha)}</span>
+      </div>`).join('') : `<p class="empty">${state.rol === 'sup' ? 'Todavía no generaste casos desde este control.' : 'No se generaron casos desde este control.'}</p>`;
+  }
+
+  // ---------- Visor de fotos ----------
+  function abrirFoto(idx) {
+    const c = byId(state.controlId); if (!c) return;
+    // Orden de lectura: por sección del formulario, y dentro de cada una, el de carga.
+    const lista = SECCIONES.flatMap((s) => c.photos.map((p, i) => ({ p, i })).filter((x) => x.p.sec === s.id));
+    let pos = Math.max(0, lista.findIndex((x) => x.i === idx));
+    const back = document.createElement('div');
+    back.className = 'lightbox';
+    back.setAttribute('role', 'dialog'); back.setAttribute('aria-modal', 'true'); back.setAttribute('aria-label', 'Foto ampliada');
+    back.innerHTML = `
+      <button type="button" class="lb-close" aria-label="Cerrar">✕</button>
+      ${lista.length > 1 ? '<button type="button" class="lb-nav prev" aria-label="Foto anterior">‹</button><button type="button" class="lb-nav next" aria-label="Foto siguiente">›</button>' : ''}
+      <figure><img alt=""><figcaption></figcaption></figure>`;
+    document.body.appendChild(back);
+    const img = $('img', back); const cap = $('figcaption', back);
+    // Ajusta la foto al espacio disponible: achica las grandes y agranda las chicas (hasta 4 veces).
+    const ajustar = () => {
+      if (!img.naturalWidth) return;
+      const s = Math.min(4, (Math.min(window.innerWidth * 0.86, 1100)) / img.naturalWidth, (window.innerHeight * 0.7) / img.naturalHeight);
+      img.style.width = `${Math.round(img.naturalWidth * s)}px`; img.style.height = 'auto';
+    };
+    img.addEventListener('load', ajustar);
+    window.addEventListener('resize', ajustar);
+    const pintar = () => {
+      const { p } = lista[pos];
+      img.src = p.url; img.alt = p.caption || `Foto de ${SEC[p.sec].titulo}`;
+      if (img.complete) ajustar();
+      cap.innerHTML = `<b>${esc(SEC[p.sec].titulo)}</b>${p.caption ? ' · ' + esc(p.caption) : ''}<span>Foto ${pos + 1} de ${lista.length} · ${esc(CLIENTE[c.cliente].nombre)} · ${c.id}</span>`;
+    };
+    const mover = (d) => { pos = (pos + d + lista.length) % lista.length; pintar(); };
+    const cerrar = () => { back.remove(); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', ajustar); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') cerrar();
+      else if (e.key === 'ArrowLeft' && lista.length > 1) mover(-1);
+      else if (e.key === 'ArrowRight' && lista.length > 1) mover(1);
+    };
+    document.addEventListener('keydown', onKey);
+    back.addEventListener('click', (e) => {
+      if (e.target.closest('.lb-close') || e.target === back || e.target.tagName === 'FIGURE') cerrar();
+      else if (e.target.closest('.lb-nav.prev')) mover(-1);
+      else if (e.target.closest('.lb-nav.next')) mover(1);
+    });
+    pintar();
+    $('.lb-close', back).focus();
+  }
+
+  // ---------- Modal: generar caso ----------
+  function abrirCasoModal(itemId) {
+    const c = byId(state.controlId); if (!c) return;
+    const cl = CLIENTE[c.cliente];
+    const lista = itemId ? [ITEM[itemId]] : [...criticosDe(c), ...mediosDe(c)];
+    const lineas = lista.map((it) => {
+      const com = (c.comentarios[it.sec] || '').trim();
+      return `• ${SEC[it.sec].titulo} — ${it.texto}: puntaje ${c.answers[it.id]}${com ? ' (' + com + ')' : ''}`;
+    });
+    const desc = `Control ${c.id} — Formulario de supervisión — ${cl.nombre}.\n${lineas.length ? 'Hallazgos:\n' + lineas.join('\n') : 'Describí acá la situación detectada.'}`;
+    const minV = lista.length ? Math.min(...lista.map((it) => (esNum(c.answers[it.id]) ? c.answers[it.id] : 5))) : 5;
+    const defTipo = !lista.length ? 'Observación' : minV <= 2 ? 'No conformidad' : minV === 3 ? 'Observación' : 'Oportunidad de Mejora';
+    const nFotos = c.photos.length;
+
+    const back = document.createElement('div');
+    back.className = 'confirm-backdrop';
+    back.innerHTML = `
+      <div class="confirm-box" role="dialog" aria-modal="true" aria-label="Generar caso">
+        <h3>Generar caso desde el control ${c.id}</h3>
+        <p class="muted" style="margin:0">Se deriva a la administración central con los datos del control y, si querés, las fotos.</p>
+        <form class="modal-form" id="caso-form">
+          <div><label class="field-label">Servicio</label><input type="text" value="${esc(cl.nombre)} — ${esc(cl.localidad)}" disabled></div>
+          <div><label class="field-label">Tipo de caso</label><select id="cf-tipo">${CASO_TIPOS.map((t) => `<option ${t === defTipo ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div><label class="field-label">Afectación (proceso)</label><select id="cf-afect">${CASO_AFECTACIONES.map((a) => `<option ${a === 'Prestación del Servicio' ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+          <div><label class="field-label">Derivar a</label><select id="cf-der">${DERIVAR_A.map((a) => `<option>${a}</option>`).join('')}</select></div>
+          <div><label class="field-label">Descripción</label><textarea id="cf-desc" rows="6">${esc(desc)}</textarea></div>
+          <label class="check"><input type="checkbox" id="cf-fotos" ${nFotos ? 'checked' : 'disabled'}> Adjuntar las ${nFotos} foto${nFotos === 1 ? '' : 's'} del control</label>
+          <p class="muted" id="cf-err" style="color:var(--status-crit);margin:0" hidden></p>
+          <div class="row"><button type="button" id="cf-cancel">Cancelar</button><button type="submit" class="primary">Generar y derivar caso</button></div>
+        </form>
+      </div>`;
+    document.body.appendChild(back);
+    const cerrar = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    document.addEventListener('keydown', onKey);
+    back.addEventListener('click', (e) => { if (e.target === back) cerrar(); });
+    $('#cf-cancel', back).addEventListener('click', cerrar);
+    $('#cf-desc', back).focus();
+    $('#caso-form', back).addEventListener('submit', (e) => {
+      e.preventDefault();
+      const descripcion = $('#cf-desc', back).value.trim();
+      if (descripcion.length < 10) { const er = $('#cf-err', back); er.textContent = 'Escribí una descripción de al menos 10 caracteres.'; er.hidden = false; return; }
+      const caso = {
+        id: nuevoCasoId(), fecha: new Date(), cliente: c.cliente, controlId: c.id, tipo: $('#cf-tipo', back).value,
+        afectacion: $('#cf-afect', back).value, derivadoA: $('#cf-der', back).value, descripcion,
+        fotos: $('#cf-fotos', back).checked ? nFotos : 0, estado: 'Derivado',
+      };
+      casosGenerados.push(caso); c.casosIds.push(caso.id);
+      cerrar(); renderCasosControl();
+      toast(`Caso ${caso.id} derivado a ${caso.derivadoA.split(' — ')[0]}`);
+    });
+  }
+
+  // ---------- Acciones ----------
+  function setScore(itemId, raw) {
+    const c = byId(state.controlId);
+    const v = raw === 'na' ? 'na' : Number(raw);
+    c.answers[itemId] = v;
+    const row = $(`[data-item="${itemId}"]`);
+    row.querySelectorAll('.sc').forEach((b) => b.classList.toggle('selected', b.dataset.v === String(v)));
+    row.classList.remove('lvl-crit', 'lvl-warn');
+    const l = lvlCls(v); if (l) row.classList.add(l);
+    $(`[data-hint="${itemId}"]`).innerHTML = hintHtml(v, itemId);
+    updateResumen();
+  }
+
+  function guardar() {
+    const c = byId(state.controlId);
+    if (c.estado === 'Pendiente' && (Object.keys(c.answers).length || c.photos.length || Object.keys(c.comentarios).length)) c.estado = 'En curso';
+    toast('Borrador guardado. Podés continuar más tarde.');
+  }
+
+  async function finalizar() {
+    const c = byId(state.controlId);
+    const falta = faltantes(c);
+    const box = $('#faltantes');
+    if (falta.length) {
+      box.innerHTML = `<div class="alert-box"><b>No se puede finalizar todavía.</b> Falta completar:<ul>${falta.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast(`Faltan ${falta.length} dato${falta.length > 1 ? 's' : ''} para finalizar`);
+      return;
+    }
+    box.innerHTML = '';
+    // Segunda lectura de ubicación: confirma que el supervisor sigue en el servicio al cerrar el control.
+    try { c.geoFin = await obtenerPosicion(CLIENTE[c.cliente]); } catch (err) { c.geoFin = null; }
+    c.estado = 'Realizado'; c.realizadoAt = new Date();
+    if (!c.egreso) c.egreso = inputHora(c.realizadoAt);
+    const proximo = addDays(HOY, FRECUENCIA_DIAS[c.frecuencia]);
+    controles.push(nuevoControl(c.cliente, c.frecuencia, c.realizadoAt, proximo));
+    const aviso = c.geo.estado !== 'ok' ? ' · con excepción de ubicación' : (c.geoFin && c.geoFin.estado !== 'ok' ? ' · atención: al finalizar estabas fuera del radio' : '');
+    toast(`Control ${c.id} finalizado${aviso}. Próximo control: ${fmtFecha(proximo)}`);
+    state.origen = 'controles';
+    go('controles');
+  }
+
+  function agregarFotos(secId, files) {
+    const c = byId(state.controlId);
+    [...files].filter((f) => f.type.startsWith('image/')).forEach((f) => c.photos.push({ url: URL.createObjectURL(f), caption: '', sec: secId }));
+    renderFotos(secId);
+  }
+
+  // ---------- Geolocalización: posición, mapa y validación ----------
+  const SIM_DIST = { sitio: 45, cerca: 400, lejos: 2400 };
+
+  function obtenerPosicion(cl) {
+    return new Promise((resolve, reject) => {
+      const modo = state.geoModo;
+      const fin = (p) => {
+        const dist = Math.round(haversine(p.lat, p.lon, cl.lat, cl.lon));
+        const estado = p.acc > GEO_PREC ? 'precision' : dist <= GEO_RADIO ? 'ok' : 'fuera';
+        resolve({ lat: p.lat, lon: p.lon, acc: Math.round(p.acc), dist, estado, at: new Date(), modo: modo === 'real' ? 'GPS del dispositivo' : 'Simulada (demo)' });
+      };
+      if (modo !== 'real') { setTimeout(() => fin({ ...posDesde(cl, SIM_DIST[modo]), acc: modo === 'sitio' ? 12 : 18 }), 650); return; }
+      if (!navigator.geolocation) { reject(new Error('Este dispositivo no permite geolocalización.')); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fin({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy }),
+        (err) => reject(new Error(err.code === 1 ? 'Permiso de ubicación denegado: habilitalo en el navegador para poder registrar el control.' : 'No se pudo obtener la ubicación. Probá en un lugar con mejor señal.')),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      );
+    });
+  }
+
+  function worldPx(lat, lon, z) {
+    const s = 256 * Math.pow(2, z);
+    const sin = Math.sin(rad(lat));
+    return [((lon + 180) / 360) * s, (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * s];
+  }
+
+  // Mapa simple con teselas de OpenStreetMap + círculo del radio permitido + posición del supervisor.
+  function renderMap(box, cl, geo) {
+    const W = 560; const H = 380;
+    const dist = geo ? geo.dist : 0;
+    const necesario = Math.max(GEO_RADIO * 1.7, dist * 1.3);
+    const zMax = Math.log2((156543.03392 * Math.cos(rad(cl.lat)) * (H / 2)) / necesario);
+    const z = Math.max(12, Math.min(18, Math.floor(zMax)));
+    const mpp = (156543.03392 * Math.cos(rad(cl.lat))) / Math.pow(2, z);
+    const [cx, cy] = worldPx(cl.lat, cl.lon, z);
+    const x0 = cx - W / 2; const y0 = cy - H / 2;
+    let tiles = '';
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) {
+      for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++) {
+        tiles += `<img class="map-tile" alt="" src="https://tile.openstreetmap.org/${z}/${tx}/${ty}.png" style="left:${tx * 256 - x0}px;top:${ty * 256 - y0}px" onerror="this.style.display='none'">`;
+      }
+    }
+    let sup = '';
+    if (geo) {
+      const [sx, sy] = worldPx(geo.lat, geo.lon, z);
+      const px = sx - x0; const py = sy - y0;
+      const col = geo.estado === 'ok' ? 'var(--status-good)' : geo.estado === 'fuera' ? 'var(--status-crit)' : 'var(--status-warn)';
+      sup = `<line x1="${W / 2}" y1="${H / 2}" x2="${px}" y2="${py}" style="stroke:${col};stroke-width:2;stroke-dasharray:5 4"/>
+        <circle cx="${px}" cy="${py}" r="${Math.max(6, geo.acc / mpp)}" style="fill:${col};fill-opacity:.15;stroke:${col};stroke-width:1"/>
+        <circle cx="${px}" cy="${py}" r="7" style="fill:${col};stroke:#fff;stroke-width:2.5"/>`;
+    }
+    box.innerHTML = `<div class="map-inner">${tiles}
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <circle cx="${W / 2}" cy="${H / 2}" r="${GEO_RADIO / mpp}" style="fill:var(--accent);fill-opacity:.14;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:7 5"/>
+        ${sup}
+        <circle cx="${W / 2}" cy="${H / 2}" r="9" style="fill:var(--accent);stroke:#fff;stroke-width:3"/>
+      </svg></div><span class="map-attr">© OpenStreetMap contributors</span>`;
+    const k = box.clientWidth / W;
+    box.style.height = `${H * k}px`;
+    box.firstElementChild.style.transform = `scale(${k})`;
+  }
+
+  const mapLegend = (geo) => `<div class="map-legend"><span><i style="background:var(--accent)"></i>Servicio y radio permitido (${GEO_RADIO} m)</span>${geo ? `<span><i style="background:var(--status-${GEO_ESTADO[geo.estado].cls})"></i>Posición del supervisor</span>` : ''}</div>`;
+  const geoLinea = (geo) => `${geo.dist} m del servicio · precisión ±${geo.acc} m · ${fmtFechaHora(geo.at)}`;
+
+  async function abrirMapaModal(clienteKey, geoFijo) {
+    const cl = CLIENTE[clienteKey]; if (!cl) return;
+    const back = document.createElement('div');
+    back.className = 'confirm-backdrop';
+    back.innerHTML = `
+      <div class="confirm-box" style="max-width:700px" role="dialog" aria-modal="true" aria-label="Mapa del servicio">
+        <h3>${esc(cl.nombre)}</h3>
+        <p class="muted" style="margin:0">${esc(cl.domicilio)} · ${esc(cl.localidad)}, ${esc(cl.provincia)}</p>
+        <div class="map-box" id="mm-map"></div>
+        <div id="mm-legend"></div>
+        <p id="mm-info" style="margin:.7rem 0 0;font-size:.88rem"></p>
+        <p class="muted" style="margin:.5rem 0 0;font-size:.76rem">Coordenadas de ejemplo (${cl.lat.toFixed(4)}, ${cl.lon.toFixed(4)}). En el sistema real se cargan por servicio. Radio permitido: ${GEO_RADIO} m.</p>
+        <div class="row">
+          <a class="small" href="https://www.google.com/maps/dir/?api=1&destination=${cl.lat},${cl.lon}" target="_blank" rel="noopener">Cómo llegar (Google Maps)</a>
+          <button type="button" class="small" id="mm-pos">Ver mi posición</button>
+          <span style="margin-left:auto"></span>
+          <button type="button" id="mm-close">Cerrar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(back);
+    const cerrar = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    document.addEventListener('keydown', onKey);
+    back.addEventListener('click', (e) => { if (e.target === back) cerrar(); });
+    $('#mm-close', back).addEventListener('click', cerrar);
+    const map = $('#mm-map', back);
+    renderMap(map, cl, null);
+    $('#mm-legend', back).innerHTML = mapLegend(null);
+    const ver = async () => {
+      const info = $('#mm-info', back);
+      info.textContent = 'Obteniendo tu ubicación…';
+      try {
+        const geo = await obtenerPosicion(cl);
+        renderMap(map, cl, geo);
+        $('#mm-legend', back).innerHTML = mapLegend(geo);
+        info.innerHTML = `<b style="color:var(--status-${GEO_ESTADO[geo.estado].cls})">${GEO_ESTADO[geo.estado].txt}.</b> ${esc(geoLinea(geo))}.`;
+      } catch (err) { info.textContent = err.message; }
+    };
+    $('#mm-pos', back).addEventListener('click', ver);
+    if (geoFijo) {
+      // Posición ya registrada en un control (vista de Administración): no se vuelve a leer el GPS
+      $('#mm-pos', back).hidden = true;
+      renderMap(map, cl, geoFijo);
+      $('#mm-legend', back).innerHTML = mapLegend(geoFijo);
+      $('#mm-info', back).innerHTML = `<b style="color:var(--status-${GEO_ESTADO[geoFijo.estado].cls})">${GEO_ESTADO[geoFijo.estado].txt}.</b> Ubicación registrada por el supervisor: ${esc(geoLinea(geoFijo))}.`;
+    } else if (state.geoModo !== 'real') ver();
+  }
+
+  // Tarjeta "Ubicación del control" dentro de la planilla
+  function renderGeo() {
+    const c = byId(state.controlId); const box = $('#geo-result'); if (!c || !box) return;
+    const ro = soloLectura(c);
+    const cl = CLIENTE[c.cliente];
+    if (!c.geo) { box.innerHTML = `<p class="empty" style="padding-bottom:0">${state.rol === 'sup' ? 'Todavía no registraste tu ubicación en este servicio.' : 'El supervisor todavía no registró su ubicación en este servicio.'}</p>`; return; }
+    const g = c.geo; const e = GEO_ESTADO[g.estado];
+    box.innerHTML = `
+      <div class="row"><span class="pill ${e.cls}"><i class="chip ${e.cls}"></i>${e.txt}</span><span class="muted">Check-in: ${esc(geoLinea(g))} · ${esc(g.modo)}</span></div>
+      ${c.geoFin ? `<div class="row" style="margin-top:.3rem"><span class="pill ${GEO_ESTADO[c.geoFin.estado].cls}"><i class="chip ${GEO_ESTADO[c.geoFin.estado].cls}"></i>Al finalizar: ${GEO_ESTADO[c.geoFin.estado].txt.toLowerCase()}</span><span class="muted">${esc(geoLinea(c.geoFin))}</span></div>` : ''}
+      <div class="map-box" id="geo-map"></div>
+      <div id="geo-legend"></div>
+      ${g.estado !== 'ok' ? `<div style="margin-top:.8rem"><label class="field-label">Motivo (queda marcado como excepción y se informa a Administración central)</label>
+        <textarea data-in="geoMotivo" placeholder="Ej.: el servicio estaba cerrado, el cliente me recibió en otra sede…" ${ro ? 'disabled' : ''}>${esc(c.geoMotivo)}</textarea></div>` : ''}`;
+    renderMap($('#geo-map'), cl, g);
+    $('#geo-legend').innerHTML = mapLegend(g);
+  }
+
+  async function checkin() {
+    const c = byId(state.controlId); const cl = CLIENTE[c.cliente];
+    const btn = $('[data-act="geo-checkin"]');
+    btn.disabled = true; btn.textContent = 'Obteniendo ubicación…';
+    try {
+      c.geo = await obtenerPosicion(cl);
+      if (!c.ingreso) { c.ingreso = inputHora(c.geo.at); const i = $('[data-in="ingreso"]'); if (i) i.value = c.ingreso; }
+      renderGeo();
+      toast(c.geo.estado === 'ok' ? `Ubicación verificada: estás a ${c.geo.dist} m del servicio` : `${GEO_ESTADO[c.geo.estado].txt}: a ${c.geo.dist} m del servicio`);
+    } catch (err) { toast(err.message); }
+    btn.disabled = false; btn.textContent = c.geo ? 'Volver a registrar ubicación' : 'Registrar ubicación (check-in)';
+  }
+
+  // ---------- Delegación de eventos ----------
+  app.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act;
+    // Administración central solo mira: ninguna acción que modifique la planilla se ejecuta desde su vista.
+    if (state.rol === 'admin' && ['score', 'foto-cam', 'foto-gal', 'quitar-foto', 'geo-checkin', 'abrir-caso', 'guardar', 'finalizar'].includes(act)) return;
+    if (act === 'abrir-control') { e.preventDefault(); state.origen = state.view; openPlanilla(el.dataset.id); }
+    else if (act === 'volver') go(state.origen || 'controles');
+    else if (act === 'score') setScore(el.dataset.i, el.dataset.v);
+    else if (act === 'foto-cam') $(`input[data-file][data-sec="${el.dataset.sec}"][data-kind="cam"]`).click();
+    else if (act === 'foto-gal') $(`input[data-file][data-sec="${el.dataset.sec}"][data-kind="gal"]`).click();
+    else if (act === 'quitar-foto') { byId(state.controlId).photos.splice(Number(el.dataset.i), 1); SECCIONES.forEach((s) => renderFotos(s.id)); }
+    else if (act === 'abrir-caso') abrirCasoModal(el.dataset.i);
+    else if (act === 'ver-mapa') { e.preventDefault(); abrirMapaModal(el.dataset.cl); }
+    else if (act === 'ampliar-foto') abrirFoto(Number(el.dataset.i));
+    else if (act === 'generar-control') abrirGenerarControl();
+    else if (act === 'reasignar-menu') abrirMenuReasignar(el, el.dataset.id);
+    else if (act === 'ver-mapa-geo') { const c = byId(el.dataset.id); abrirMapaModal(c.cliente, c.geo.estado !== 'ok' ? c.geo : c.geoFin); }
+    else if (act === 'goto') {
+      if (el.dataset.sup !== undefined) { state.aFiltros.sup = el.dataset.sup; state.aFiltros.estado = 'todos'; state.aFiltros.q = ''; }
+      if (el.dataset.estado) { state.aFiltros.estado = el.dataset.estado; state.aFiltros.sup = ''; state.aFiltros.q = ''; }
+      go(el.dataset.view);
+    }
+    else if (act === 'geo-checkin') checkin();
+    else if (act === 'guardar') guardar();
+    else if (act === 'finalizar') finalizar();
+  });
+
+  app.addEventListener('input', (e) => {
+    const t = e.target; const kind = t.dataset.in;
+    if (!kind || !state.controlId || state.rol === 'admin') return;
+    const c = byId(state.controlId);
+    if (kind === 'coment') c.comentarios[t.dataset.sec] = t.value;
+    else if (kind === 'fcap') c.photos[Number(t.dataset.i)].caption = t.value;
+    else if (['completoNombre', 'visitaFecha', 'ingreso', 'egreso', 'geoMotivo'].includes(kind)) c[kind] = t.value;
+  });
+  app.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.dataset.in === 'revision') {
+      const c = byId(t.dataset.id); c.revision = { estado: t.value };
+      toast(`Excepción de ${c.id}: ${REV_OPC.find(([v]) => v === t.value)[1].toLowerCase()}`); viewExcepciones();
+      return;
+    }
+    if (t.dataset.in === 'casoEstado') {
+      const x = casosGenerados.find((k) => k.id === t.dataset.id); x.estado = t.value;
+      toast(`Caso ${x.id}: ${t.value.toLowerCase()}`); viewACasos();
+      return;
+    }
+    if (!state.controlId || state.rol === 'admin') return;
+    if (t.dataset.file) { agregarFotos(t.dataset.sec, t.files); t.value = ''; }
+    else if (t.dataset.in === 'completoPor') byId(state.controlId).completoPor = t.value;
+  });
+
+  setRol('sup');
+})();
+</script>
+</body>
+</html>

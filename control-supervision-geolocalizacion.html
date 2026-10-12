@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Geolocalización del supervisor — esquema</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a6fc4'/%3E%3Cpath d='M9 17l4.5 4.5L23 12' stroke='%23fff' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f7f6f2; --surface: #fdfdfb; --raised: #ffffff; --ink: #1c1b18; --ink-2: #5f5c55; --muted: #8f8c83;
+      --hairline: #e7e5de; --wash: rgba(28, 27, 24, 0.035); --accent: #2a6fc4; --accent-wash: rgba(42, 111, 196, 0.09);
+      --good: #0ca30c; --warn: #d99a00; --crit: #c73a3a;
+      --shadow: 0 1px 2px rgba(28, 27, 24, 0.04), 0 10px 28px -14px rgba(28, 27, 24, 0.10);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --page: #131311; --surface: #1b1b18; --raised: #21211e; --ink: #f4f3ef; --ink-2: #b8b5ac; --muted: #8f8c83;
+        --hairline: #2b2b27; --wash: rgba(244, 243, 239, 0.045); --accent: #5b96e0; --accent-wash: rgba(91, 150, 224, 0.14);
+        --warn: #e0b23e; --crit: #d96666;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 32px -16px rgba(0, 0, 0, 0.45);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI Variable Display', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif; background: var(--page); color: var(--ink); max-width: 1080px; margin: 0 auto; padding: 1.6rem 1.2rem 3.5rem; line-height: 1.55; }
+    h1 { font-size: 1.6rem; font-weight: 650; letter-spacing: -0.022em; line-height: 1.15; margin: 0 0 .25rem; }
+    h2 { font-size: 1.04rem; font-weight: 600; letter-spacing: -0.012em; margin: 2.4rem 0 .5rem; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    .lead { color: var(--ink-2); max-width: 70ch; margin: .3rem 0 0; }
+    .card { background: var(--surface); border-radius: 14px; padding: 1rem 1.2rem; margin: .7rem 0; box-shadow: var(--shadow); }
+    .scroll { overflow-x: auto; }
+    .scroll svg { display: block; min-width: 880px; width: 100%; height: auto; }
+
+    /* diagrama */
+    .lane { fill: var(--wash); }
+    .lane-title { font-size: 11px; font-weight: 650; letter-spacing: .06em; fill: var(--muted); text-transform: uppercase; }
+    .box { fill: var(--raised); stroke: var(--hairline); stroke-width: 1.2; }
+    .box.acc { fill: var(--accent-wash); stroke: var(--accent); }
+    .box.good { stroke: var(--good); }
+    .box.warn { stroke: var(--warn); }
+    .t1 { font-size: 12.5px; font-weight: 650; fill: var(--ink); }
+    .t2 { font-size: 11px; fill: var(--ink-2); }
+    .ln { stroke: var(--ink-2); stroke-width: 1.4; fill: none; }
+    .ln.good { stroke: var(--good); }
+    .ln.crit { stroke: var(--crit); stroke-dasharray: 5 4; }
+    .lbl { font-size: 11px; font-weight: 650; }
+    .lbl.good { fill: var(--good); }
+    .lbl.crit { fill: var(--crit); }
+    .dec { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 1.4; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; background: var(--surface); }
+    th, td { text-align: left; padding: .6rem .75rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    th { color: var(--muted); font-weight: 550; font-size: .78rem; background: var(--wash); white-space: nowrap; }
+    .wrap { border-radius: 14px; box-shadow: var(--shadow); overflow-x: auto; }
+    .pill { display: inline-block; font-size: .74rem; font-weight: 600; padding: .08rem .55rem; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+    .pill.good { border-color: var(--good); color: var(--good); }
+    .pill.warn { border-color: var(--warn); color: var(--warn); }
+    .pill.mute { border-color: var(--hairline); color: var(--ink-2); }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .cols .card { margin: 0; }
+    .cols h3 { font-size: .95rem; margin: 0 0 .5rem; }
+    ul { margin: 0; padding-left: 1.1rem; }
+    li { margin-bottom: .35rem; font-size: .9rem; }
+    .caveat { border-left: 4px solid var(--warn); }
+    @media print { body { max-width: none; padding: 0; } .card, .wrap { box-shadow: none; border: 1px solid var(--hairline); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Geolocalización del supervisor</h1>
+    <p class="lead">Cómo el sistema comprueba que el supervisor está en el servicio cuando hace un control, y qué queda registrado. Esquema de la propuesta, con lo que ya muestra la maqueta de Control de Supervisión.</p>
+  </header>
+
+  <h2>Flujo de validación</h2>
+  <div class="card scroll">
+    <svg viewBox="0 0 1000 480" role="img" aria-label="Flujo de validación de ubicación: el supervisor abre el control, ve el mapa, registra su ubicación; el sistema lee el GPS y valida distancia y precisión; si está dentro del radio se habilita el formulario, si no debe informar un motivo; al finalizar se vuelve a leer la ubicación y el registro llega a Administración central.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--ink-2)"/></marker>
+        <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--good)"/></marker>
+        <marker id="arc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--crit)"/></marker>
+      </defs>
+
+      <rect class="lane" x="0" y="10" width="1000" height="135" rx="10"/>
+      <rect class="lane" x="0" y="160" width="1000" height="135" rx="10"/>
+      <rect class="lane" x="0" y="310" width="1000" height="120" rx="10"/>
+      <text class="lane-title" x="14" y="28">Supervisor · celular</text>
+      <text class="lane-title" x="14" y="178">Sistema</text>
+      <text class="lane-title" x="14" y="328">Administración central</text>
+
+      <!-- Carril supervisor -->
+      <rect class="box" x="24" y="45" width="130" height="62" rx="10"/>
+      <text class="t1" x="36" y="68">1 · Abre el control</text><text class="t2" x="36" y="86">del servicio asignado</text>
+      <rect class="box" x="184" y="45" width="130" height="62" rx="10"/>
+      <text class="t1" x="196" y="68">2 · Ver mapa</text><text class="t2" x="196" y="83">ubicación del servicio</text><text class="t2" x="196" y="96">y radio permitido</text>
+      <rect class="box acc" x="344" y="45" width="130" height="62" rx="10"/>
+      <text class="t1" x="356" y="68">3 · Check-in</text><text class="t2" x="356" y="86">registra su ubicación</text>
+      <rect class="box warn" x="504" y="45" width="130" height="62" rx="10"/>
+      <text class="t1" x="516" y="68">5b · Excepción</text><text class="t2" x="516" y="86">informa el motivo</text>
+      <rect class="box" x="684" y="45" width="140" height="62" rx="10"/>
+      <text class="t1" x="696" y="68">6 · Completa el control</text><text class="t2" x="696" y="83">puntajes y comentarios,</text><text class="t2" x="696" y="96">fotos con la cámara</text>
+      <rect class="box" x="850" y="45" width="130" height="62" rx="10"/>
+      <text class="t1" x="862" y="68">7 · Finaliza</text><text class="t2" x="862" y="86">cierra el formulario</text>
+
+      <!-- Carril sistema -->
+      <rect class="box" x="344" y="195" width="130" height="62" rx="10"/>
+      <text class="t1" x="356" y="218">4 · Lee el GPS</text><text class="t2" x="356" y="236">lat, lon, precisión</text><text class="t2" x="356" y="249">+ hora del sistema</text>
+      <polygon class="dec" points="569,184 650,226 569,268 488,226"/>
+      <text class="t1" x="569" y="221" text-anchor="middle">¿≤ 150 m y</text><text class="t1" x="569" y="237" text-anchor="middle">precisión ≤ 100 m?</text>
+      <rect class="box good" x="684" y="195" width="140" height="62" rx="10"/>
+      <text class="t1" x="696" y="218">5a · Verificada</text><text class="t2" x="696" y="236">habilita el formulario</text>
+      <rect class="box" x="850" y="195" width="130" height="62" rx="10"/>
+      <text class="t1" x="862" y="218">8 · Segunda lectura</text><text class="t2" x="862" y="236">de GPS al finalizar</text>
+
+      <!-- Carril administración -->
+      <rect class="box" x="850" y="340" width="130" height="62" rx="10"/>
+      <text class="t1" x="862" y="363">9 · Registro</text><text class="t2" x="862" y="381">ubicación, distancias,</text><text class="t2" x="862" y="394">horas, fotos, puntajes</text>
+      <rect class="box warn" x="684" y="340" width="140" height="62" rx="10"/>
+      <text class="t1" x="696" y="363">10 · Alerta</text><text class="t2" x="696" y="381">si hubo excepción o</text><text class="t2" x="696" y="394">salió del radio</text>
+
+      <!-- Flechas -->
+      <line class="ln" x1="154" y1="76" x2="182" y2="76" marker-end="url(#ar)"/>
+      <line class="ln" x1="314" y1="76" x2="342" y2="76" marker-end="url(#ar)"/>
+      <line class="ln" x1="409" y1="107" x2="409" y2="193" marker-end="url(#ar)"/>
+      <line class="ln" x1="474" y1="226" x2="486" y2="226" marker-end="url(#ar)"/>
+      <line class="ln crit" x1="569" y1="184" x2="569" y2="109" marker-end="url(#arc)"/>
+      <text class="lbl crit" x="578" y="152">No: fuera del radio</text>
+      <line class="ln good" x1="650" y1="226" x2="682" y2="226" marker-end="url(#arg)"/>
+      <text class="lbl good" x="656" y="216">Sí</text>
+      <line class="ln" x1="634" y1="76" x2="682" y2="76" marker-end="url(#ar)"/>
+      <line class="ln good" x1="754" y1="195" x2="754" y2="109" marker-end="url(#arg)"/>
+      <line class="ln" x1="824" y1="76" x2="848" y2="76" marker-end="url(#ar)"/>
+      <line class="ln" x1="915" y1="107" x2="915" y2="193" marker-end="url(#ar)"/>
+      <line class="ln" x1="915" y1="257" x2="915" y2="338" marker-end="url(#ar)"/>
+      <line class="ln" x1="850" y1="371" x2="826" y2="371" marker-end="url(#ar)"/>
+    </svg>
+    <p class="muted" style="margin:.6rem 0 0">Todos los pasos funcionan en la maqueta. En el paso 10, la excepción aparece en el Panel de Administración central ("Para atender") y se revisa en la pestaña Excepciones de ubicación. Lo que falta es el aviso automático por mail o WhatsApp.</p>
+  </div>
+
+  <h2>Capas de evidencia</h2>
+  <p class="muted" style="margin:0 0 .6rem">Ningún dato aislado prueba la presencia. Lo que da confianza es combinarlos.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>Capa</th><th>Qué demuestra</th><th>En la maqueta</th></tr></thead>
+    <tbody>
+      <tr><td><b>GPS dentro del radio</b> (150 m) y con precisión de hasta 100 m</td><td>Que el celular estaba en el servicio al registrar el check-in</td><td><span class="pill good">Implementada (ubicación simulada)</span></td></tr>
+      <tr><td><b>Segunda lectura al finalizar</b></td><td>Que el supervisor siguió en el servicio mientras completaba el control</td><td><span class="pill good">Implementada</span></td></tr>
+      <tr><td><b>Excepción con motivo</b></td><td>Trazabilidad cuando no se pudo verificar: queda marcado y Administración la aprueba o pide una aclaración</td><td><span class="pill good">Implementada</span></td></tr>
+      <tr><td><b>Fotos con la cámara</b> desde el formulario</td><td>Evidencia visual de la visita, tomada en el momento</td><td><span class="pill warn">Parcial: falta guardar hora y ubicación de cada foto</span></td></tr>
+      <tr><td><b>Hora del servidor</b> (no la del celular)</td><td>Cuándo ocurrió realmente; evita adelantar o atrasar el reloj del teléfono</td><td><span class="pill warn">Propuesta: la maqueta usa la hora del navegador</span></td></tr>
+      <tr><td><b>QR pegado en el servicio</b></td><td>Presencia física: el supervisor escanea un código que solo está en el lugar</td><td><span class="pill mute">Opcional</span></td></tr>
+      <tr><td><b>App móvil propia</b> con detección de ubicación simulada</td><td>Reduce el falseo del GPS con aplicaciones de "ubicación falsa"</td><td><span class="pill mute">Opcional</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Qué hay que definir con Berlim</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Reglas</h3>
+      <ul>
+        <li><b>Radio permitido</b> por servicio. Se propuso 150 m; un supermercado grande o un obrador pueden necesitar más.</li>
+        <li><b>Coordenadas de cada servicio</b>: se cargan en la base de clientes a partir de la dirección y se confirman en el lugar.</li>
+        <li><b>Qué pasa ante una excepción</b>: si alcanza con el motivo o si Administración debe aprobarla.</li>
+        <li><b>Precisión mínima</b> aceptada del GPS (se propuso 100 m).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Datos personales</h3>
+      <ul>
+        <li>Solo se guarda la ubicación en dos momentos: el check-in y el cierre. <b>No hay seguimiento continuo.</b></li>
+        <li>Informar al supervisor qué se registra y para qué, y definir con RR.HH. cuánto tiempo se conserva.</li>
+        <li>El navegador pide permiso de ubicación al supervisor; sin permiso no se puede registrar el control.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Límites a tener presentes</h2>
+  <div class="card caveat">
+    <ul>
+      <li><b>No es una prueba infalible.</b> Desde el navegador, el GPS puede falsearse con aplicaciones de ubicación simulada. Por eso se combinan capas y se deja rastro de cada excepción; el objetivo es que no pasar inadvertido sea difícil, no que sea imposible.</li>
+      <li><b>En interiores o subsuelos</b> el GPS pierde precisión. Con precisión peor que 100 m el sistema no da la ubicación por verificada y pide el motivo.</li>
+      <li><b>Requiere HTTPS</b> y que el celular tenga la ubicación activada. En la maqueta, la ubicación es simulada con un selector; la opción "ubicación real del dispositivo" prueba el GPS verdadero, pero las coordenadas de los servicios son de ejemplo.</li>
+    </ul>
+  </div>
+
+  <h2>Qué muestra la maqueta</h2>
+  <div class="card">
+    <ul>
+      <li>Botón <b>Ver mapa</b> bajo <b>Realizar control</b> en cada fila de "Mis controles", con el radio permitido y la distancia del supervisor.</li>
+      <li>Tarjeta <b>Ubicación del control</b> en la planilla con el check-in y su resultado (verificada, fuera del radio, precisión insuficiente).</li>
+      <li>No se puede finalizar un control sin check-in; si la ubicación no está verificada, hay que informar el motivo.</li>
+      <li>Segunda lectura al finalizar, y columna <b>Ubicación</b> en el historial con las excepciones marcadas.</li>
+      <li>Vista de <b>Administración central</b> (selector "Ver como"): las excepciones llegan al Panel, se revisan en una pestaña propia con el motivo y el mapa de dónde estaba el supervisor, y se marcan como aprobadas o con aclaración pedida.</li>
+      <li>Selector de demo (barra superior) para simular estar en el servicio, cerca pero afuera, lejos, o usar el GPS real.</li>
+    </ul>
+  </div>
+</body>
+</html>
