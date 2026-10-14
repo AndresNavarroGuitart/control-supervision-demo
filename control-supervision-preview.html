@@ -93,6 +93,10 @@
     th { color: var(--muted); font-weight: 550; font-size: .78rem; letter-spacing: .015em; background: var(--wash); white-space: nowrap; }
     .code { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: .85em; letter-spacing: .01em; white-space: nowrap; }
     .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* Grilla de Administración central: más ancha y compacta para que entren todas las columnas */
+    body[data-rol="admin"] { max-width: 1400px; }
+    table.compact th, table.compact td { padding: .55rem .5rem; font-size: .86rem; }
+    table.compact td:nth-child(3) { min-width: 11rem; }
     tr.clickable { cursor: pointer; }
     tr.clickable:hover td { background: var(--wash); }
     tr.row-crit td:first-child { box-shadow: inset 3px 0 0 var(--status-crit); }
@@ -543,7 +547,10 @@
     c.geo = mkGeo(d1, new Date(d.getTime() - 60000));
     c.geoFin = mkGeo(d2, new Date(d.getTime() + 70 * 60000));
     if (excepcion) { c.geoMotivo = motivoExc; c.revision = { estado: cl === 'mvc' ? 'Aprobada' : 'Pendiente' }; }
+    // Fotos de ejemplo: una por cada hallazgo comentado, más un par de registros generales del servicio
     Object.keys(coms).forEach((sec, k) => c.photos.push({ url: placeholderFoto('Foto de ejemplo', 200 + i * 20 + k * 40), caption: 'Hallazgo en ' + SEC[sec].titulo.toLowerCase(), sec }));
+    c.photos.push({ url: placeholderFoto('Vista general', 120 + i * 17), caption: 'Vista general de las áreas exteriores', sec: 'ext' });
+    c.photos.push({ url: placeholderFoto('Sector interno', 300 + i * 13), caption: 'Estado de los sectores internos', sec: 'int' });
     controles.push(c);
   });
 
@@ -590,6 +597,8 @@
     c.visitaFecha = inputFecha(HOY); c.ingreso = '09:40';
     Object.assign(c.answers, { ext1: 'na', ext2: 4, ext3: 4, ext4: 5, int1: 4, int2: 2, int3: 4 });
     c.comentarios.int = 'Zócalos de góndolas del pasillo 7 sin limpiar.';
+    c.photos.push({ url: placeholderFoto('Pasillo 7', 24), caption: 'Zócalos de góndolas del pasillo 7', sec: 'int' });
+    c.photos.push({ url: placeholderFoto('Ingreso', 210), caption: 'Ingreso de personal y mercadería', sec: 'ext' });
   })();
 
   // ---------- Cálculos ----------
@@ -674,6 +683,7 @@
   }
   function setRol(rol) {
     state.rol = rol; state.origen = rol === 'sup' ? 'controles' : 'panel';
+    document.body.dataset.rol = rol;
     document.querySelectorAll('.role-switch button').forEach((b) => b.classList.toggle('on', b.dataset.rol === rol));
     $('#head-sub').textContent = SUBTITULO[rol];
     $('.geo-sim').hidden = rol !== 'sup';
@@ -932,8 +942,8 @@
         <select id="a-sup"><option value="">Todos los supervisores</option>${Object.values(SUPS).map((s) => `<option value="${s.key}" ${f.sup === s.key ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select>
         <span class="count-note" id="a-count"></span>
       </div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>ID</th><th>Supervisor</th><th>Servicio</th><th>Frecuencia</th><th>Plazo / realizado</th><th>Estado</th><th>Reasignación</th><th>Ubicación</th><th>Puntaje</th><th></th></tr></thead>
+      <div class="table-wrap"><table class="compact">
+        <thead><tr><th>ID</th><th>Supervisor</th><th>Servicio</th><th>Plazo / realizado</th><th>Estado</th><th>Reasignación</th><th>Ubicación</th><th>Puntaje</th><th></th></tr></thead>
         <tbody id="a-body"></tbody>
       </table></div>
       <p class="muted" style="margin-top:.6rem">Click en una fila para ver lo que cargó el supervisor, incluso en los controles todavía en curso. Siempre en solo lectura.</p>`;
@@ -959,16 +969,15 @@
       return `<tr class="clickable" data-act="abrir-control" data-id="${c.id}">
         <td class="code">${c.id}</td>
         <td>${esc(supDe(c).nombre)}<div class="muted">${esc(supDe(c).zona)}</div>${c.sup && c.reasig ? `<div><span class="pill warn" title="${esc(c.reasig.motivo)}">Reasignado desde ${esc(SUPS[c.reasig.de].nombre)}</span></div>` : ''}</td>
-        <td><b>${esc(cl.nombre)}</b><div class="muted">${esc(cl.localidad)}, ${esc(cl.provincia)}</div></td>
-        <td>${c.frecuencia}</td>
+        <td><b>${esc(cl.nombre)}</b><div class="muted">${esc(cl.localidad)}, ${esc(cl.provincia)} · ${c.frecuencia}</div></td>
         <td class="num">${ro ? fmtFechaHora(c.realizadoAt) : fmtFecha(c.plazo) + `<div>${plazoChip(c)}</div>`}</td>
         <td>${estadoBadge(c)}</td>
         <td>${ro ? '<span class="muted" title="Un control realizado no se puede reasignar">—</span>' : `<button type="button" class="small" data-act="reasignar-menu" data-id="${c.id}" aria-haspopup="menu">Reasignar ▾</button>`}</td>
         <td>${c.geo ? geoPill(c) : '<span class="muted">—</span>'}</td>
-        <td>${promedioDe(c) !== null ? promPill(promedioDe(c)) + (parcial ? '<div class="muted">parcial</div>' : '') : '<span class="muted">—</span>'}</td>
+        <td>${promedioDe(c) !== null ? promPill(promedioDe(c)) + (parcial ? '<div class="muted">parcial</div>' : '') : '<span class="muted">—</span>'}${c.photos.length ? `<div class="muted">${c.photos.length} foto${c.photos.length === 1 ? '' : 's'}</div>` : ''}</td>
         <td><button class="small" data-act="abrir-control" data-id="${c.id}">${ro ? 'Ver formulario' : cargado ? 'Ver avance' : 'Ver formulario'}</button></td>
       </tr>`;
-    }).join('') : '<tr><td colspan="10" class="empty">No hay controles que coincidan con los filtros.</td></tr>';
+    }).join('') : '<tr><td colspan="9" class="empty">No hay controles que coincidan con los filtros.</td></tr>';
   }
 
   // ----- Reasignar un control a otro supervisor -----
